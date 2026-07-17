@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-phorayana-base text-phorayana-text-primary p-6 md:p-12 flex flex-col justify-between">
-    <!-- Header -->
+    <!-- Top Navigation Bar -->
     <header class="flex justify-between items-center border-b border-phorayana-border pb-6">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 bg-phorayana-primary flex items-center justify-center font-bold text-lg text-phorayana-text-primary rounded-none">
@@ -11,95 +11,159 @@
 
       <div class="flex items-center gap-4">
         <span class="hidden md:inline text-xs text-phorayana-text-secondary">
-          Logged in as: <strong class="text-phorayana-text-primary font-mono">{{ user?.email }}</strong>
+          Sesi aktif: <strong class="text-phorayana-text-primary font-mono">{{ user?.email }}</strong>
         </span>
         <button 
           @click="handleLogout" 
           :disabled="isLoggingOut"
           class="bg-phorayana-surface hover:bg-phorayana-primary border border-phorayana-border hover:border-phorayana-primary text-phorayana-text-primary text-xs font-bold py-2 px-4 transition-all duration-200 uppercase tracking-wider rounded-none disabled:opacity-50"
         >
-          {{ isLoggingOut ? 'Logging Out...' : 'Keluar' }}
+          {{ isLoggingOut ? 'Keluar...' : 'Keluar' }}
         </button>
       </div>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="my-auto py-12">
-      <div class="max-w-screen-2xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Dashboard Welcome Hero -->
-        <div class="md:col-span-2 bg-phorayana-surface border border-phorayana-border p-8 md:p-12 flex flex-col justify-center rounded-none">
-          <span class="text-xs text-phorayana-primary uppercase font-bold tracking-widest mb-2">
-            Commuter Portal
-          </span>
-          <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4">
-            Selamat Datang di Phorayana
-          </h2>
-          <p class="text-phorayana-text-secondary text-sm md:text-base leading-relaxed max-w-2xl mb-6">
-            Ecosystem data komunal perjalanan Anda telah aktif. Phorayana mencatat rute, durasi riil perjalanan, cuaca, dan kalender acara secara otomatis untuk meramalkan kepadatan lalu lintas di wilayah Bogor dan sekitarnya.
-          </p>
-          <div class="flex flex-wrap gap-4">
-            <!-- Disabled Placeholder CTA buttons to represent future flows -->
+    <!-- Main Content Area -->
+    <main class="my-auto py-8">
+      <div class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Panel: 1-Tap Check-In Widget (Takes 2 Columns on Desktop) -->
+        <div class="lg:col-span-2 bg-phorayana-surface border border-phorayana-border p-8 md:p-12 flex flex-col justify-between min-h-[450px] rounded-none">
+          <div>
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <span class="text-xs text-phorayana-accent uppercase font-bold tracking-widest block mb-1">
+                  Macro Check-In
+                </span>
+                <h2 class="text-2xl font-bold tracking-tight">
+                  Log Perjalanan Komunal
+                </h2>
+              </div>
+              
+              <!-- Active Trip Status Pill -->
+              <div 
+                v-if="isTracking" 
+                class="flex items-center gap-2 bg-phorayana-accent/10 border border-phorayana-accent text-phorayana-accent px-3 py-1.5 text-xs font-mono font-semibold"
+              >
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-phorayana-accent opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-phorayana-accent"></span>
+                </span>
+                TRIP BERJALAN: {{ formatTime(elapsedTime) }}
+              </div>
+              <div 
+                v-else 
+                class="bg-phorayana-border text-phorayana-text-secondary px-3 py-1.5 text-xs font-mono font-semibold border border-phorayana-border"
+              >
+                SIAP DIALIRKAN
+              </div>
+            </div>
+            
+            <p class="text-phorayana-text-secondary text-xs md:text-sm max-w-xl leading-relaxed mb-8">
+              Phorayana mencatat titik GPS dan waktu keberangkatan Anda. Data akan diperkaya dengan info cuaca dan kegiatan wilayah secara otomatis saat Anda sampai di tujuan.
+            </p>
+          </div>
+
+          <!-- Central Viewport: The Macro Button -->
+          <div class="flex flex-col items-center justify-center my-auto py-6">
             <button 
-              disabled 
-              class="bg-phorayana-primary/50 text-phorayana-text-primary/70 border border-phorayana-primary/30 text-xs font-bold py-3 px-6 uppercase tracking-wider cursor-not-allowed rounded-none"
+              @click="toggleTracking"
+              :class="[
+                'w-64 h-64 md:w-72 md:h-72 flex flex-col items-center justify-center border-4 border-phorayana-border text-center transition-all duration-300 rounded-none focus:outline-none select-none',
+                isTracking 
+                  ? 'bg-phorayana-accent hover:bg-[#be7b5f] text-phorayana-base border-phorayana-accent' 
+                  : 'bg-phorayana-primary hover:bg-[#b02f2d] text-phorayana-text-primary border-phorayana-primary'
+              ]"
             >
-              Mulai Perjalanan (Segera Hadir)
+              <span class="text-[10px] uppercase tracking-widest font-extrabold opacity-80 mb-2">
+                {{ isTracking ? 'Sedang Berjalan' : '1-Tap Mulai' }}
+              </span>
+              <span class="text-xl md:text-2xl font-black uppercase tracking-wider px-4">
+                {{ isTracking ? 'AKHIRI PERJALANAN' : 'MULAI PERJALANAN' }}
+              </span>
+              <span v-if="isTracking" class="text-2xl font-mono mt-3 font-bold">
+                {{ formatTime(elapsedTime) }}
+              </span>
+              <span v-else class="text-xs opacity-60 mt-2 font-mono">
+                Tap untuk mencatat GPS awal
+              </span>
             </button>
-            <button 
-              disabled 
-              class="bg-phorayana-surface text-phorayana-text-secondary/70 border border-phorayana-border text-xs font-bold py-3 px-6 uppercase tracking-wider cursor-not-allowed rounded-none"
-            >
-              Lihat Riwayat
-            </button>
+          </div>
+
+          <!-- Quick Guidelines Notice -->
+          <div class="mt-8 pt-4 border-t border-phorayana-border text-center lg:text-left">
+            <span class="text-[10px] text-phorayana-text-secondary leading-normal">
+              *ponytail: UI Slice only. Lokasi GPS dan penyimpanan ke Supabase akan dipasang pada iterasi logika backend berikutnya.
+            </span>
           </div>
         </div>
 
-        <!-- Sidebar Info -->
-        <div class="bg-phorayana-surface border border-phorayana-border p-8 flex flex-col justify-between rounded-none">
-          <div>
-            <h3 class="text-lg font-bold mb-4 border-b border-phorayana-border pb-2">
-              Status Sistem
+        <!-- Right Panel: Side Controls (Sticky Vehicle & Saved Places) (Takes 1 Column) -->
+        <div class="flex flex-col gap-6">
+          
+          <!-- Sticky Vehicle Selection -->
+          <div class="bg-phorayana-surface border border-phorayana-border p-6 rounded-none">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
+              Kendaraan Default
             </h3>
-            <ul class="space-y-3 text-xs">
-              <li class="flex justify-between">
-                <span class="text-phorayana-text-secondary">Sesi Auth:</span>
-                <span class="font-mono text-phorayana-accent font-semibold">Aktif</span>
-              </li>
-              <li class="flex justify-between">
-                <span class="text-phorayana-text-secondary">Supabase DB:</span>
-                <span class="font-mono text-phorayana-accent font-semibold">Tersambung</span>
-              </li>
-              <li class="flex justify-between">
-                <span class="text-phorayana-text-secondary">PWA Service Worker:</span>
-                <span class="font-mono text-phorayana-text-secondary">Belum Terpasang</span>
-              </li>
-              <li class="flex justify-between">
-                <span class="text-phorayana-text-secondary">Data Lokal (IndexedDB):</span>
-                <span class="font-mono text-phorayana-text-secondary">0 Antrean</span>
-              </li>
-            </ul>
+            <p class="text-xs text-phorayana-text-secondary mb-4 leading-normal">
+              Kendaraan terakhir yang digunakan akan tersimpan otomatis (sticky).
+            </p>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button 
+                v-for="vehicle in ['Motor', 'Mobil', 'Angkot/Bus', 'Kereta']" 
+                :key="vehicle"
+                :class="[
+                  'p-3 text-center border font-bold transition-colors select-none rounded-none',
+                  vehicle === 'Motor' 
+                    ? 'border-phorayana-primary bg-phorayana-primary/10 text-phorayana-primary' 
+                    : 'border-phorayana-border bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary'
+                ]"
+              >
+                {{ vehicle }}
+              </button>
+            </div>
           </div>
-          <div class="mt-8 pt-4 border-t border-phorayana-border text-[10px] text-phorayana-text-secondary">
-            Gunakan tombol "Keluar" di pojok kanan atas untuk memutus sesi dan kembali ke layar login.
+
+          <!-- Saved Places Selection -->
+          <div class="bg-phorayana-surface border border-phorayana-border p-6 rounded-none flex-grow">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
+              Lokasi Favorit
+            </h3>
+            <p class="text-xs text-phorayana-text-secondary mb-4 leading-normal">
+              Pilih dari profil tempat tinggal, kampus, atau kantor magang Anda.
+            </p>
+            <div class="space-y-2">
+              <div 
+                v-for="place in ['Rumah (Bogor)', 'Kampus IPB', 'Kantor Magang (Jakarta)', 'Stasiun Bogor']" 
+                :key="place"
+                class="flex items-center justify-between p-3 bg-phorayana-base border border-phorayana-border text-xs text-phorayana-text-secondary hover:text-phorayana-text-primary cursor-pointer transition-colors"
+              >
+                <span>{{ place }}</span>
+                <span class="text-[10px] font-mono text-phorayana-accent">Gunakan</span>
+              </div>
+            </div>
           </div>
+          
         </div>
+        
       </div>
     </main>
 
     <!-- Footer -->
     <footer class="border-t border-phorayana-border pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-phorayana-text-secondary">
       <div>
-        Running on Nuxt 4 + Supabase local environment.
+        Sistem Phorayana PWA &copy; 2026. Warm Asphalt Matte Dashboard.
       </div>
       <div>
-        Dashboard Locked | v1.0 Dev Sandbox
+        Garis Lintang & Bujur Terkunci
       </div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, watchEffect } from 'vue'
+import { ref, watchEffect, onUnmounted } from 'vue'
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
@@ -113,9 +177,37 @@ watchEffect(() => {
   }
 })
 
+const isTracking = ref(false)
+const elapsedTime = ref(0)
+let timerInterval = null
+
+const toggleTracking = () => {
+  isTracking.value = !isTracking.value
+  if (isTracking.value) {
+    elapsedTime.value = 0
+    timerInterval = setInterval(() => {
+      elapsedTime.value++
+    }, 1000)
+  } else {
+    if (timerInterval) clearInterval(timerInterval)
+  }
+}
+
+const formatTime = (seconds) => {
+  const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
+  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+  const s = (seconds % 60).toString().padStart(2, '0')
+  return `${h}:${m}:${s}`
+}
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
+
 const handleLogout = async () => {
   isLoggingOut.value = true
   try {
+    if (timerInterval) clearInterval(timerInterval)
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     router.replace('/login')
