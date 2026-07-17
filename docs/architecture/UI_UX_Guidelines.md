@@ -25,6 +25,25 @@ All elements must adhere to the **Warm Asphalt Matte** system.
 
 ### Core Restrictions
 - **No Glossy Effects**: Avoid overlays, blurs, or gradients mimicking glassmorphism.
-- **No Drop Shadows**: Use solid borders (`border-phorayana-border`) to separate cards or elevated panels.
+- **No Blurry Drop Shadows**: Do not use standard CSS box shadows with blur radii. Rely instead on solid, hard-edged offset shadows to define elevation.
 - **No Gradients**: Rely purely on flat background fills (`bg-phorayana-base` and `bg-phorayana-surface`).
 - **High-Contrast Typography**: Off-white primary text (`text-phorayana-text-primary`) and muted secondary text (`text-phorayana-text-secondary`).
+
+---
+
+## 3. Shape Behavior (Neobrutalism & Tactile Interaction)
+
+To create a tactile, physical feel for a PWA undervarying mobile lighting conditions, Phorayana incorporates a structured Neobrutalist aesthetic for shapes and interactive states:
+
+### Layout Borders & Shadows
+- **Thick Borders**: Utilize thick solid borders on container panels, cards, inputs, and buttons (typically `border-2 border-black`).
+- **Hard Offset Shadows**: Implement flat, solid, high-contrast black shadows to elevate surfaces instead of blurry shadows:
+  - Standard Elevation: `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`
+- **Large Rounded Corners**: Use distinct rounded corners (`rounded-xl` or `rounded-2xl`) on inputs, cards, and buttons to balance the heavy borders.
+
+### Interactive Tactile Click States (Buttons & Clickable Cards)
+- On `:hover` or `:focus`, buttons can slightly translate or highlight.
+- On `:active` (the moment of clicking/pressing down), elements should translate down and to the right while reducing the offset shadow to simulate a physical, tactile click:
+  - Standard Press state: `active:translate-x-1 active:translate-y-1 active:shadow-none` or `active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`
+  - Ensure `transition-all duration-150` is applied to smooth this tactile feedback.
+

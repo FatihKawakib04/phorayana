@@ -16,7 +16,7 @@
         <button 
           @click="handleLogout" 
           :disabled="isLoggingOut"
-          class="bg-phorayana-surface hover:bg-phorayana-primary border border-phorayana-border hover:border-phorayana-primary text-phorayana-text-primary text-xs font-bold py-2 px-4 transition-all duration-200 uppercase tracking-wider rounded-none disabled:opacity-50"
+          class="bg-phorayana-surface hover:bg-[#b02f2d] border-2 border-black text-phorayana-text-primary text-xs font-bold py-2 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all duration-150 uppercase tracking-wider rounded-xl disabled:opacity-50"
         >
           {{ isLoggingOut ? 'Keluar...' : 'Keluar' }}
         </button>
@@ -28,7 +28,7 @@
       <div class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         <!-- Left Panel: 1-Tap Check-In Widget (Takes 2 Columns on Desktop) -->
-        <div class="lg:col-span-2 bg-phorayana-surface border border-phorayana-border p-8 md:p-12 flex flex-col justify-between min-h-[450px] rounded-none">
+        <div class="lg:col-span-2 bg-phorayana-surface border-2 border-black p-8 md:p-12 flex flex-col justify-between min-h-[450px] rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div>
             <div class="flex items-center justify-between mb-6">
               <div>
@@ -69,10 +69,10 @@
             <button 
               @click="toggleTracking"
               :class="[
-                'w-64 h-64 md:w-72 md:h-72 flex flex-col items-center justify-center border-4 border-phorayana-border text-center transition-all duration-300 rounded-none focus:outline-none select-none',
+                'w-64 h-64 md:w-72 md:h-72 flex flex-col items-center justify-center border-4 border-black text-center transition-all duration-150 rounded-2xl focus:outline-none select-none shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-1.5 active:translate-y-1.5 active:shadow-none',
                 isTracking 
-                  ? 'bg-phorayana-accent hover:bg-[#be7b5f] text-phorayana-base border-phorayana-accent' 
-                  : 'bg-phorayana-primary hover:bg-[#b02f2d] text-phorayana-text-primary border-phorayana-primary'
+                  ? 'bg-phorayana-accent hover:bg-[#be7b5f] text-phorayana-base' 
+                  : 'bg-phorayana-primary hover:bg-[#b02f2d] text-phorayana-text-primary'
               ]"
             >
               <span class="text-[10px] uppercase tracking-widest font-extrabold opacity-80 mb-2">
@@ -102,7 +102,7 @@
         <div class="flex flex-col gap-6">
           
           <!-- Sticky Vehicle Selection -->
-          <div class="bg-phorayana-surface border border-phorayana-border p-6 rounded-none">
+          <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
               Kendaraan Default
             </h3>
@@ -114,10 +114,10 @@
                 v-for="vehicle in ['Motor', 'Mobil', 'Angkot/Bus', 'Kereta']" 
                 :key="vehicle"
                 :class="[
-                  'p-3 text-center border font-bold transition-colors select-none rounded-none',
+                  'p-3 text-center border-2 font-bold transition-all duration-150 select-none rounded-xl border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none',
                   vehicle === 'Motor' 
-                    ? 'border-phorayana-primary bg-phorayana-primary/10 text-phorayana-primary' 
-                    : 'border-phorayana-border bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary'
+                    ? 'bg-phorayana-primary/20 text-phorayana-primary' 
+                    : 'bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary'
                 ]"
               >
                 {{ vehicle }}
@@ -126,7 +126,7 @@
           </div>
 
           <!-- Saved Places Selection -->
-          <div class="bg-phorayana-surface border border-phorayana-border p-6 rounded-none flex-grow">
+          <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl flex-grow shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
               Lokasi Favorit
             </h3>
@@ -137,7 +137,7 @@
               <div 
                 v-for="place in ['Rumah (Bogor)', 'Kampus IPB', 'Kantor Magang (Jakarta)', 'Stasiun Bogor']" 
                 :key="place"
-                class="flex items-center justify-between p-3 bg-phorayana-base border border-phorayana-border text-xs text-phorayana-text-secondary hover:text-phorayana-text-primary cursor-pointer transition-colors"
+                class="flex items-center justify-between p-3 bg-phorayana-base border-2 border-black text-xs text-phorayana-text-secondary hover:text-phorayana-text-primary cursor-pointer rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all duration-150"
               >
                 <span>{{ place }}</span>
                 <span class="text-[10px] font-mono text-phorayana-accent">Gunakan</span>

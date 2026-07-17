@@ -5,7 +5,7 @@
       <div>
         <div class="flex items-center gap-2">
           <!-- Phorayana Logo (Simple Solid Square icon) -->
-          <div class="w-8 h-8 bg-phorayana-primary flex items-center justify-center font-bold text-lg text-phorayana-text-primary rounded-none">
+          <div class="w-8 h-8 bg-phorayana-primary flex items-center justify-center font-bold text-lg text-phorayana-text-primary rounded-lg border-2 border-black">
             P
           </div>
           <span class="text-xl font-bold tracking-wider uppercase">Phorayana</span>
@@ -29,7 +29,7 @@
 
     <!-- Auth Form Panel (Right on Desktop, Bottom on Mobile) -->
     <div class="flex items-center justify-center p-6 md:p-16">
-      <div class="w-full max-w-md bg-phorayana-surface border border-phorayana-border p-8 rounded-none">
+      <div class="w-full max-w-md bg-phorayana-surface border-2 border-black p-8 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
         <h2 class="text-2xl font-bold text-phorayana-text-primary mb-2">
           {{ isLogin ? 'Masuk ke Phorayana' : 'Buat Akun Baru' }}
         </h2>
@@ -40,13 +40,13 @@
         <!-- Error & Success Message Banner -->
         <div 
           v-if="errorMessage" 
-          class="bg-phorayana-alert/15 border border-phorayana-alert text-phorayana-alert p-3 mb-4 text-xs font-semibold rounded-none"
+          class="bg-phorayana-alert/15 border-2 border-black text-phorayana-alert p-3 mb-4 text-xs font-bold rounded-xl animate-pulse"
         >
           {{ errorMessage }}
         </div>
         <div 
           v-if="successMessage" 
-          class="bg-phorayana-accent/15 border border-phorayana-accent text-phorayana-accent p-3 mb-4 text-xs font-semibold rounded-none"
+          class="bg-phorayana-accent/15 border-2 border-black text-phorayana-accent p-3 mb-4 text-xs font-bold rounded-xl"
         >
           {{ successMessage }}
         </div>
@@ -62,7 +62,7 @@
               id="email" 
               required
               placeholder="nama@email.com"
-              class="w-full bg-phorayana-base border border-phorayana-border text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-none transition-colors"
+              class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-xl transition-colors"
             />
           </div>
 
@@ -76,7 +76,7 @@
               id="password" 
               required
               placeholder="••••••••"
-              class="w-full bg-phorayana-base border border-phorayana-border text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-none transition-colors"
+              class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-xl transition-colors"
             />
           </div>
 
@@ -90,14 +90,14 @@
               id="confirmPassword" 
               required
               placeholder="••••••••"
-              class="w-full bg-phorayana-base border border-phorayana-border text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-none transition-colors"
+              class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary p-3 text-sm focus:outline-none focus:border-phorayana-primary rounded-xl transition-colors"
             />
           </div>
 
           <button 
             type="submit" 
             :disabled="isLoading"
-            class="w-full bg-phorayana-primary hover:bg-phorayana-accent text-phorayana-text-primary font-bold p-3 text-sm transition-colors duration-200 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
+            class="w-full bg-phorayana-primary text-phorayana-text-primary border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-[#b02f2d] active:translate-x-1 active:translate-y-1 active:shadow-none font-bold p-3 text-sm transition-all duration-150 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
           >
             {{ isLoading ? 'Memproses...' : (isLogin ? 'Masuk' : 'Daftar') }}
           </button>
