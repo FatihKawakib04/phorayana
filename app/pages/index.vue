@@ -76,7 +76,7 @@
           <div class="flex flex-col items-center justify-center my-auto py-6">
             <button 
               @click="isTracking ? endTrip() : startTrip()"
-              :disabled="isLoadingGeo || isLoggingOut"
+              :disabled="isLoadingGeo || isLoggingOut || isLoadingPlaces"
               :class="[
                 'w-64 h-64 md:w-72 md:h-72 flex flex-col items-center justify-center border-4 border-black text-center transition-all duration-150 rounded-2xl focus:outline-none select-none shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-1.5 active:translate-y-1.5 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed',
                 isTracking 
@@ -122,12 +122,12 @@
               <button 
                 v-for="vehicle in ['motor', 'mobil', 'angkot', 'kereta']" 
                 :key="vehicle"
-                @click="selectedVehicle = vehicle"
+                @click="selectVehicle(vehicle)"
                 :class="[
-                  'p-3 text-center border-2 font-bold transition-all duration-150 select-none rounded-xl border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none uppercase tracking-wider',
+                  'p-3 text-center border-2 font-bold transition-all duration-150 select-none rounded-xl border-black uppercase tracking-wider',
                   selectedVehicle === vehicle 
-                    ? 'bg-phorayana-primary/20 text-phorayana-primary' 
-                    : 'bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary'
+                    ? 'bg-phorayana-primary text-phorayana-text-primary translate-x-0.5 translate-y-0.5 shadow-none' 
+                    : 'bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
                 ]"
               >
                 {{ vehicle === 'angkot' ? 'Angkot/Bus' : vehicle }}
@@ -136,21 +136,73 @@
           </div>
 
           <!-- Saved Places Selection -->
-          <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl flex-grow shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
-              Lokasi Favorit
-            </h3>
-            <p class="text-xs text-phorayana-text-secondary mb-4 leading-normal">
-              Pilih dari profil tempat tinggal, kampus, atau kantor magang Anda.
-            </p>
-            <div class="space-y-2">
-              <div 
-                v-for="place in ['Rumah (Bogor)', 'Kampus IPB', 'Kantor Magang (Jakarta)', 'Stasiun Bogor']" 
-                :key="place"
-                class="flex items-center justify-between p-3 bg-phorayana-base border-2 border-black text-xs text-phorayana-text-secondary hover:text-phorayana-text-primary cursor-pointer rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all duration-150"
-              >
-                <span>{{ place }}</span>
-                <span class="text-[10px] font-mono text-phorayana-accent">Gunakan</span>
+          <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl flex-grow shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[320px]">
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
+                Lokasi Favorit
+              </h3>
+              <p class="text-xs text-phorayana-text-secondary mb-4 leading-normal">
+                Pilih lokasi sebagai target titik keberangkatan atau tujuan perjalanan Anda.
+              </p>
+              
+              <!-- Saved Places List -->
+              <div class="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                <div 
+                  v-for="place in savedPlaces" 
+                  :key="place.id"
+                  @click="toggleSelectPlace(place.id)"
+                  :class="[
+                    'flex items-center justify-between p-3 bg-phorayana-base border-2 border-black text-xs cursor-pointer rounded-xl transition-all duration-150 select-none',
+                    selectedDestinationId === place.id 
+                      ? 'border-phorayana-accent bg-phorayana-accent/15 text-phorayana-accent translate-x-0.5 translate-y-0.5 shadow-none font-bold' 
+                      : 'text-phorayana-text-secondary hover:text-phorayana-text-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
+                  ]"
+                >
+                  <div class="flex flex-col">
+                    <span>{{ place.place_name }}</span>
+                    <span class="text-[9px] opacity-60 font-mono">
+                      {{ place.latitude.toFixed(4) }}, {{ place.longitude.toFixed(4) }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span v-if="selectedDestinationId === place.id" class="text-[9px] font-mono text-phorayana-accent">TERPILIH</span>
+                    <button 
+                      @click.stop="deleteSavedPlace(place.id)"
+                      :disabled="isLoadingPlaces"
+                      class="text-phorayana-alert hover:text-red-500 font-bold px-2 py-1 border border-black hover:border-red-500 rounded-lg text-[9px] bg-phorayana-surface active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+                
+                <div v-if="savedPlaces.length === 0" class="text-center py-6 text-xs text-phorayana-text-secondary">
+                  Belum ada lokasi favorit tersimpan.
+                </div>
+              </div>
+            </div>
+
+            <!-- Add Saved Place Form -->
+            <div class="mt-6 pt-4 border-t border-phorayana-border">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+                Simpan Lokasi Saat Ini (GPS)
+              </label>
+              <div class="flex gap-2">
+                <input 
+                  v-model="newPlaceName" 
+                  type="text" 
+                  placeholder="Nama lokasi (misal: Rumah)"
+                  :disabled="isLoadingPlaces || isLoadingGeo"
+                  @keyup.enter="addSavedPlace"
+                  class="flex-grow bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2 text-xs focus:outline-none focus:border-phorayana-primary rounded-xl transition-colors disabled:opacity-50"
+                />
+                <button 
+                  @click="addSavedPlace" 
+                  :disabled="isLoadingPlaces || isLoadingGeo || !newPlaceName.trim()"
+                  class="bg-phorayana-primary text-phorayana-text-primary border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#b02f2d] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none font-bold px-3 py-2 text-xs transition-all duration-150 uppercase tracking-wider disabled:opacity-50 rounded-xl"
+                >
+                  Tambah
+                </button>
               </div>
             </div>
           </div>
@@ -188,6 +240,12 @@ const isLoadingGeo = ref(false)
 const errorMessage = ref('')
 let timerInterval = null
 
+// Saved Places CRUD State
+const savedPlaces = ref([])
+const selectedDestinationId = ref(null)
+const newPlaceName = ref('')
+const isLoadingPlaces = ref(false)
+
 // Protect the page from unauthenticated access
 watchEffect(() => {
   if (!user.value) {
@@ -195,13 +253,36 @@ watchEffect(() => {
   }
 })
 
-// Check for active running trip on mount
+// Initialize session data on mount
 onMounted(async () => {
   if (!user.value) return
   try {
+    // 1. Fetch user profile for sticky default vehicle
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('last_vehicle_used')
+      .eq('id', user.value.id)
+      .maybeSingle()
+
+    if (profile && !profileError) {
+      selectedVehicle.value = profile.last_vehicle_used || 'motor'
+    }
+
+    // 2. Fetch saved places list
+    const { data: places, error: placesError } = await supabase
+      .from('saved_places')
+      .select('*')
+      .eq('user_id', user.value.id)
+      .order('created_at', { ascending: true })
+
+    if (places && !placesError) {
+      savedPlaces.value = places
+    }
+
+    // 3. Fetch running trip session
     const { data, error } = await supabase
       .from('trips')
-      .select('id, start_time, vehicle_type')
+      .select('id, start_time, vehicle_type, start_place_id')
       .eq('user_id', user.value.id)
       .eq('status', 'running')
       .order('start_time', { ascending: false })
@@ -211,6 +292,7 @@ onMounted(async () => {
     if (data && !error) {
       activeTripId.value = data.id
       selectedVehicle.value = data.vehicle_type
+      selectedDestinationId.value = data.start_place_id
       isTracking.value = true
 
       const startTime = new Date(data.start_time).getTime()
@@ -222,7 +304,7 @@ onMounted(async () => {
       }, 1000)
     }
   } catch (err) {
-    console.error('Failed to fetch active trip session:', err.message)
+    console.error('Failed to initialize dashboard session:', err.message)
   }
 })
 
@@ -256,6 +338,92 @@ const getGPSCoordinates = () => {
   })
 }
 
+// Select default vehicle and update profiles
+const selectVehicle = async (vehicle) => {
+  selectedVehicle.value = vehicle
+  if (!user.value) return
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.value.id,
+        last_vehicle_used: vehicle,
+        updated_at: new Date().toISOString()
+      })
+    if (error) throw error
+  } catch (err) {
+    console.error('Failed to save default vehicle:', err.message)
+  }
+}
+
+// Toggle active saved place destination selection
+const toggleSelectPlace = (placeId) => {
+  if (selectedDestinationId.value === placeId) {
+    selectedDestinationId.value = null
+  } else {
+    selectedDestinationId.value = placeId
+  }
+}
+
+// Add a saved place using current GPS coordinates
+const addSavedPlace = async () => {
+  if (!newPlaceName.value.trim() || !user.value) return
+  isLoadingPlaces.value = true
+  errorMessage.value = ''
+
+  try {
+    const coords = await getGPSCoordinates()
+    const { data, error } = await supabase
+      .from('saved_places')
+      .insert({
+        user_id: user.value.id,
+        place_name: newPlaceName.value.trim(),
+        latitude: coords.lat,
+        longitude: coords.lng
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    savedPlaces.value.push(data)
+    newPlaceName.value = ''
+  } catch (err) {
+    errorMessage.value = err.message || 'Gagal menambahkan lokasi.'
+    console.error(err)
+  } finally {
+    isLoadingPlaces.value = false
+  }
+}
+
+// Delete a saved place
+const deleteSavedPlace = async (id) => {
+  if (!user.value) return
+  isLoadingPlaces.value = true
+  errorMessage.value = ''
+
+  try {
+    const { error } = await supabase
+      .from('saved_places')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.value.id)
+
+    if (error) throw error
+
+    savedPlaces.value = savedPlaces.value.filter(place => place.id !== id)
+    if (selectedDestinationId.value === id) {
+      selectedDestinationId.value = null
+    }
+  } catch (err) {
+    errorMessage.value = err.message || 'Gagal menghapus lokasi.'
+    console.error(err)
+  } finally {
+    isLoadingPlaces.value = false
+  }
+}
+
 // Start trip logic
 const startTrip = async () => {
   if (!user.value) return
@@ -272,6 +440,7 @@ const startTrip = async () => {
         start_time: new Date().toISOString(),
         start_lat: coords.lat,
         start_lng: coords.lng,
+        start_place_id: selectedDestinationId.value,
         status: 'running'
       })
       .select('id')
@@ -307,6 +476,7 @@ const endTrip = async () => {
         end_time: new Date().toISOString(),
         end_lat: coords.lat,
         end_lng: coords.lng,
+        end_place_id: selectedDestinationId.value,
         status: 'completed',
         duration_minutes: Math.ceil(elapsedTime.value / 60)
       })
@@ -316,6 +486,7 @@ const endTrip = async () => {
 
     isTracking.value = false
     activeTripId.value = null
+    selectedDestinationId.value = null
     if (timerInterval) clearInterval(timerInterval)
   } catch (err) {
     errorMessage.value = err.message || 'Gagal mengakhiri perjalanan.'
