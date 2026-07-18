@@ -19,6 +19,9 @@ export default defineNuxtConfig({
       callback: '/confirm',
       exclude: []
     }
+  },
+  devServer: {
+    host: '0.0.0.0'
   }
 })
 
