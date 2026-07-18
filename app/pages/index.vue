@@ -225,11 +225,15 @@
 </template>
 
 <script setup>
-import { ref, watchEffect, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const router = useRouter()
+
+// Compute userId supporting both full user object (.id) and JWT payload session (.sub)
+const userId = computed(() => user.value?.id || user.value?.sub)
+
 
 const isLoggingOut = ref(false)
 const isTracking = ref(false)
@@ -253,15 +257,15 @@ watchEffect(() => {
   }
 })
 
-// Initialize session data on mount
-onMounted(async () => {
-  if (!user.value) return
+// Initialize session data when user is loaded
+const initDashboard = async () => {
+  if (!userId.value) return
   try {
     // 1. Fetch user profile for sticky default vehicle
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('last_vehicle_used')
-      .eq('id', user.value.id)
+      .eq('id', userId.value)
       .maybeSingle()
 
     if (profile && !profileError) {
@@ -272,7 +276,7 @@ onMounted(async () => {
     const { data: places, error: placesError } = await supabase
       .from('saved_places')
       .select('*')
-      .eq('user_id', user.value.id)
+      .eq('user_id', userId.value)
       .order('created_at', { ascending: true })
 
     if (places && !placesError) {
@@ -283,7 +287,7 @@ onMounted(async () => {
     const { data, error } = await supabase
       .from('trips')
       .select('id, start_time, vehicle_type, start_place_id')
-      .eq('user_id', user.value.id)
+      .eq('user_id', userId.value)
       .eq('status', 'running')
       .order('start_time', { ascending: false })
       .limit(1)
@@ -299,6 +303,7 @@ onMounted(async () => {
       const now = new Date().getTime()
       elapsedTime.value = Math.max(0, Math.floor((now - startTime) / 1000))
 
+      if (timerInterval) clearInterval(timerInterval)
       timerInterval = setInterval(() => {
         elapsedTime.value++
       }, 1000)
@@ -306,7 +311,14 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to initialize dashboard session:', err.message)
   }
-})
+}
+
+// Watch user to initialize dashboard once session is populated
+watch(userId, (newId) => {
+  if (newId) {
+    initDashboard()
+  }
+}, { immediate: true })
 
 // Geolocation helper wrapped in Promise
 const getGPSCoordinates = () => {
@@ -347,7 +359,7 @@ const selectVehicle = async (vehicle) => {
     const { error } = await supabase
       .from('profiles')
       .upsert({
-        id: user.value.id,
+        id: userId.value,
         last_vehicle_used: vehicle,
         updated_at: new Date().toISOString()
       })
@@ -377,7 +389,7 @@ const addSavedPlace = async () => {
     const { data, error } = await supabase
       .from('saved_places')
       .insert({
-        user_id: user.value.id,
+        user_id: userId.value,
         place_name: newPlaceName.value.trim(),
         latitude: coords.lat,
         longitude: coords.lng
@@ -408,7 +420,7 @@ const deleteSavedPlace = async (id) => {
       .from('saved_places')
       .delete()
       .eq('id', id)
-      .eq('user_id', user.value.id)
+      .eq('user_id', userId.value)
 
     if (error) throw error
 
@@ -435,7 +447,7 @@ const startTrip = async () => {
     const { data, error } = await supabase
       .from('trips')
       .insert({
-        user_id: user.value.id,
+        user_id: userId.value,
         vehicle_type: selectedVehicle.value,
         start_time: new Date().toISOString(),
         start_lat: coords.lat,
@@ -494,6 +506,14 @@ const endTrip = async () => {
   } finally {
     isLoadingGeo.value = false
   }
+}
+
+// Format seconds to HH:MM:SS
+const formatTime = (seconds) => {
+  const h = Math.floor(seconds / 3600).toString().padStart(2, '0')
+  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0')
+  const s = (seconds % 60).toString().padStart(2, '0')
+  return `${h}:${m}:${s}`
 }
 
 onUnmounted(() => {
