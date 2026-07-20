@@ -313,10 +313,30 @@ const initDashboard = async () => {
   }
 }
 
-// Watch user to initialize dashboard once session is populated
+// Reset state variables to default values when user session is cleared (logout/expiration)
+const resetState = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+  isTracking.value = false
+  elapsedTime.value = 0
+  selectedVehicle.value = 'motor'
+  activeTripId.value = null
+  isLoadingGeo.value = false
+  errorMessage.value = ''
+  savedPlaces.value = []
+  selectedDestinationId.value = null
+  newPlaceName.value = ''
+  isLoadingPlaces.value = false
+}
+
+// Watch user to initialize dashboard once session is populated, or reset it upon logout
 watch(userId, (newId) => {
   if (newId) {
     initDashboard()
+  } else {
+    resetState()
   }
 }, { immediate: true })
 
