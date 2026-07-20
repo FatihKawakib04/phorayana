@@ -382,6 +382,7 @@
 <script setup>
 // ponytail: direct client queries, fat page component. ceiling: offline queries fail, index.vue is 560+ lines. upgrade: refactor logic to useSavedPlaces and build IndexedDB sync queue (Refactoring vs Offline-First Skala Prioritas)
 import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
+import { get, set, del } from 'idb-keyval'
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
@@ -648,27 +649,31 @@ const calculateTotalDistance = (path) => {
   return total
 }
 
-// LocalStorage Mirroring: Clear stored session
-const clearTrackingStorage = () => {
+// LocalStorage Mirroring -> IndexedDB: Clear stored session
+const clearTrackingStorage = async () => {
   if (import.meta.client) {
-    localStorage.removeItem('wpy_active_trip_id')
-    localStorage.removeItem('wpy_active_route_path')
-    localStorage.removeItem('wpy_start_place_id')
-    localStorage.removeItem('wpy_end_place_id')
+    try {
+      await del('wpy_active_trip_id')
+      await del('wpy_active_route_path')
+      await del('wpy_start_place_id')
+      await del('wpy_end_place_id')
+    } catch (e) {
+      console.error('Failed to clear IndexedDB session:', e)
+    }
   }
 }
 
-// LocalStorage Mirroring: Rehydrate stored session on mount
-const initActiveTripSession = () => {
+// LocalStorage Mirroring -> IndexedDB: Rehydrate stored session on mount
+const initActiveTripSession = async () => {
   if (!import.meta.client) return
-  const storedTripId = localStorage.getItem('wpy_active_trip_id')
-  const storedRoutePath = localStorage.getItem('wpy_active_route_path')
-  const storedStartPlaceId = localStorage.getItem('wpy_start_place_id')
-  const storedEndPlaceId = localStorage.getItem('wpy_end_place_id')
-  
-  if (storedTripId && storedRoutePath) {
-    try {
-      const path = JSON.parse(storedRoutePath)
+  try {
+    const storedTripId = await get('wpy_active_trip_id')
+    const storedRoutePath = await get('wpy_active_route_path')
+    const storedStartPlaceId = await get('wpy_start_place_id')
+    const storedEndPlaceId = await get('wpy_end_place_id')
+    
+    if (storedTripId && storedRoutePath) {
+      const path = Array.isArray(storedRoutePath) ? storedRoutePath : JSON.parse(storedRoutePath)
       if (path.length > 0) {
         const startTimeStr = path[0].t
         const startTime = new Date(startTimeStr).getTime()
@@ -692,21 +697,18 @@ const initActiveTripSession = () => {
       startPlaceId.value = storedStartPlaceId ? Number(storedStartPlaceId) : null
       endPlaceId.value = storedEndPlaceId ? Number(storedEndPlaceId) : null
       startGPSTracking()
-    } catch (e) {
-      console.error('Error rehydrating stored route path:', e)
     }
+  } catch (e) {
+    console.error('Error rehydrating stored route path from IndexedDB:', e)
   }
 }
 
 // Sync queued offline check-outs to Supabase when connection is back
 const syncOfflineQueue = async () => {
   if (!import.meta.client || !navigator.onLine) return
-  const queueStr = localStorage.getItem('wpy_offline_sync_queue')
-  if (!queueStr) return
-
   try {
-    const queue = JSON.parse(queueStr)
-    if (queue.length === 0) return
+    const queue = await get('wpy_offline_sync_queue')
+    if (!queue || queue.length === 0) return
 
     const remainingQueue = []
     for (const item of queue) {
@@ -723,9 +725,9 @@ const syncOfflineQueue = async () => {
     }
 
     if (remainingQueue.length > 0) {
-      localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(remainingQueue))
+      await set('wpy_offline_sync_queue', remainingQueue)
     } else {
-      localStorage.removeItem('wpy_offline_sync_queue')
+      await del('wpy_offline_sync_queue')
       infoMessage.value = 'Seluruh data perjalanan offline berhasil disinkronisasikan!'
       setTimeout(() => { infoMessage.value = '' }, 5000)
     }
@@ -778,14 +780,17 @@ const submitManualFix = async () => {
 
     if (!syncSuccess) {
       if (import.meta.client) {
-        const queueStr = localStorage.getItem('wpy_offline_sync_queue')
-        const queue = queueStr ? JSON.parse(queueStr) : []
-        queue.push({
-          tripId: activeTripId.value,
-          payload: updatePayload
-        })
-        localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(queue))
-        infoMessage.value = 'Perbaikan manual disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online.'
+        try {
+          const queue = (await get('wpy_offline_sync_queue')) || []
+          queue.push({
+            tripId: activeTripId.value,
+            payload: JSON.parse(JSON.stringify(updatePayload))
+          })
+          await set('wpy_offline_sync_queue', JSON.parse(JSON.stringify(queue)))
+          infoMessage.value = 'Perbaikan manual disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online.'
+        } catch (e) {
+          console.error('Failed to write manual fix to IndexedDB:', e)
+        }
       }
     } else {
       infoMessage.value = 'Perjalanan berhasil diperbaiki secara manual!'
@@ -834,13 +839,13 @@ const startGPSTracking = () => {
       }
       routePath.value.push(newCoord)
 
-      // 2. LocalStorage Mirroring (Antiloss)
+      // 2. LocalStorage Mirroring -> IndexedDB (Antiloss)
       if (import.meta.client) {
-        localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
+        set('wpy_active_route_path', JSON.parse(JSON.stringify(routePath.value)))
         if (activeTripId.value) {
-          localStorage.setItem('wpy_active_trip_id', activeTripId.value)
-          if (startPlaceId.value) localStorage.setItem('wpy_start_place_id', String(startPlaceId.value))
-          if (endPlaceId.value) localStorage.setItem('wpy_end_place_id', String(endPlaceId.value))
+          set('wpy_active_trip_id', activeTripId.value)
+          if (startPlaceId.value) set('wpy_start_place_id', String(startPlaceId.value))
+          if (endPlaceId.value) set('wpy_end_place_id', String(endPlaceId.value))
         }
       }
     },
@@ -973,12 +978,12 @@ const startTrip = async () => {
     activeTripStartTime.value = startTimeStr
     routePath.value = [{ lat: coords.lat, lng: coords.lng, t: startTimeStr }]
     
-    // LocalStorage Mirroring (Antiloss) on trip start
+    // LocalStorage Mirroring -> IndexedDB (Antiloss) on trip start
     if (import.meta.client) {
-      localStorage.setItem('wpy_active_trip_id', data.id)
-      localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
-      if (startPlaceId.value) localStorage.setItem('wpy_start_place_id', String(startPlaceId.value))
-      if (endPlaceId.value) localStorage.setItem('wpy_end_place_id', String(endPlaceId.value))
+      set('wpy_active_trip_id', data.id)
+      set('wpy_active_route_path', JSON.parse(JSON.stringify(routePath.value)))
+      if (startPlaceId.value) set('wpy_start_place_id', String(startPlaceId.value))
+      if (endPlaceId.value) set('wpy_end_place_id', String(endPlaceId.value))
     }
 
     timerInterval = setInterval(() => {
@@ -1023,9 +1028,9 @@ const endTrip = async () => {
       t: endTimeStr
     })
 
-    // Update LocalStorage Mirroring sebelum push ke DB
+    // Update LocalStorage Mirroring -> IndexedDB sebelum push ke DB
     if (import.meta.client) {
-      localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
+      set('wpy_active_route_path', JSON.parse(JSON.stringify(routePath.value)))
     }
 
     // 3. Kalkulasi Metrik Akhir
@@ -1086,14 +1091,17 @@ const endTrip = async () => {
     if (!syncSuccess) {
       // Masukkan ke antrean offline
       if (import.meta.client) {
-        const queueStr = localStorage.getItem('wpy_offline_sync_queue')
-        const queue = queueStr ? JSON.parse(queueStr) : []
-        queue.push({
-          tripId: activeTripId.value,
-          payload: updatePayload
-        })
-        localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(queue))
-        infoMessage.value = 'Perjalanan disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online kembali.'
+        try {
+          const queue = (await get('wpy_offline_sync_queue')) || []
+          queue.push({
+            tripId: activeTripId.value,
+            payload: JSON.parse(JSON.stringify(updatePayload))
+          })
+          await set('wpy_offline_sync_queue', JSON.parse(JSON.stringify(queue)))
+          infoMessage.value = 'Perjalanan disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online kembali.'
+        } catch (e) {
+          console.error('Failed to write offline sync queue to IndexedDB:', e)
+        }
       }
     } else {
       infoMessage.value = 'Perjalanan berhasil disinkronisasikan ke server!'
@@ -1104,7 +1112,7 @@ const endTrip = async () => {
     isTracking.value = false
     activeTripId.value = null
     activeTripStartTime.value = null
-    selectedDestinationId.value = null
+    endPlaceId.value = null
     routePath.value = []
     clearTrackingStorage()
 

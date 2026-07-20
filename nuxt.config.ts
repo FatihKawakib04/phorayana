@@ -4,7 +4,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxtjs/supabase'
+    '@nuxtjs/supabase',
+    '@vite-pwa/nuxt'
   ],
   css: [
     '~/assets/css/tailwind.css'
@@ -18,6 +19,63 @@ export default defineNuxtConfig({
       login: '/login',
       callback: '/confirm',
       exclude: []
+    }
+  },
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Phorayana',
+      short_name: 'Phorayana',
+      description: 'Phorayana crowdsourced commute duration logger',
+      theme_color: '#181818',
+      background_color: '#181818',
+      icons: [
+        {
+          src: 'icon.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: 'icon.png',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      runtimeCaching: [
+        {
+          urlPattern: /^http:\/\/127\.0\.0\.1:54321\/rest\/v1\/trips.*/,
+          handler: 'NetworkOnly',
+          method: 'POST',
+          options: {
+            backgroundSync: {
+              name: 'phorayana-offline-trips',
+              options: {
+                maxRetentionTime: 24 * 60
+              }
+            }
+          }
+        },
+        {
+          urlPattern: /^http:\/\/127\.0\.0\.1:54321\/rest\/v1\/trips.*/,
+          handler: 'NetworkOnly',
+          method: 'PATCH',
+          options: {
+            backgroundSync: {
+              name: 'phorayana-offline-trips',
+              options: {
+                maxRetentionTime: 24 * 60
+              }
+            }
+          }
+        }
+      ]
+    },
+    devOptions: {
+      enabled: true,
+      type: 'module'
     }
   },
   devServer: {
