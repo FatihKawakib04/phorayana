@@ -76,6 +76,14 @@
             >
               {{ errorMessage }}
             </div>
+
+            <!-- Success/Info Banner -->
+            <div 
+              v-if="infoMessage" 
+              class="bg-phorayana-accent/15 border-2 border-black text-phorayana-accent p-3 mb-6 text-xs font-bold rounded-xl"
+            >
+              {{ infoMessage }}
+            </div>
           </div>
 
           <!-- Central Viewport: The Macro Button -->
@@ -129,8 +137,9 @@
                 v-for="vehicle in ['motor', 'mobil', 'angkot', 'kereta']" 
                 :key="vehicle"
                 @click="selectVehicle(vehicle)"
+                :disabled="isTracking"
                 :class="[
-                  'p-3 text-center border-2 font-bold transition-all duration-150 select-none rounded-xl border-black uppercase tracking-wider',
+                  'p-3 text-center border-2 font-bold transition-all duration-150 select-none rounded-xl border-black uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed',
                   selectedVehicle === vehicle 
                     ? 'bg-phorayana-primary text-phorayana-text-primary translate-x-0.5 translate-y-0.5 shadow-none' 
                     : 'bg-phorayana-base text-phorayana-text-secondary hover:text-phorayana-text-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
@@ -141,6 +150,50 @@
             </div>
           </div>
 
+          <!-- Route Location Dropdowns -->
+          <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary border-b border-phorayana-border pb-2 mb-4">
+              Pilihan Rute Perjalanan
+            </h3>
+            
+            <div class="space-y-4">
+              <!-- Dropdown Asal -->
+              <div>
+                <label for="start-place-select" class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+                  Titik Keberangkatan (Asal)
+                </label>
+                <select 
+                  id="start-place-select"
+                  v-model="startPlaceId"
+                  :disabled="isTracking"
+                  class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary disabled:opacity-50"
+                >
+                  <option :value="null">Gunakan Lokasi Saat Ini (Instant GPS)</option>
+                  <option v-for="place in savedPlaces" :key="place.id" :value="place.id">
+                    {{ place.place_name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Dropdown Tujuan -->
+              <div>
+                <label for="end-place-select" class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+                  Titik Kedatangan (Tujuan)
+                </label>
+                <select 
+                  id="end-place-select"
+                  v-model="endPlaceId"
+                  class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary"
+                >
+                  <option :value="null">Gunakan Lokasi Saat Ini (Instant GPS)</option>
+                  <option v-for="place in savedPlaces" :key="place.id" :value="place.id">
+                    {{ place.place_name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- Saved Places Selection -->
           <div class="bg-phorayana-surface border-2 border-black p-6 rounded-2xl flex-grow shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[320px]">
             <div>
@@ -148,7 +201,7 @@
                 Lokasi Favorit
               </h3>
               <p class="text-xs text-phorayana-text-secondary mb-4 leading-normal">
-                Pilih lokasi sebagai target titik keberangkatan atau tujuan perjalanan Anda.
+                Daftar lokasi favorit Anda. Ketuk nama lokasi untuk memilih sebagai tujuan.
               </p>
               
               <!-- Saved Places List -->
@@ -156,10 +209,10 @@
                 <div 
                   v-for="place in savedPlaces" 
                   :key="place.id"
-                  @click="toggleSelectPlace(place.id)"
+                  @click="endPlaceId = (endPlaceId === place.id ? null : place.id)"
                   :class="[
                     'flex items-center justify-between p-3 bg-phorayana-base border-2 border-black text-xs cursor-pointer rounded-xl transition-all duration-150 select-none',
-                    selectedDestinationId === place.id 
+                    endPlaceId === place.id 
                       ? 'border-phorayana-accent bg-phorayana-accent/15 text-phorayana-accent translate-x-0.5 translate-y-0.5 shadow-none font-bold' 
                       : 'text-phorayana-text-secondary hover:text-phorayana-text-primary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
                   ]"
@@ -171,7 +224,7 @@
                     </span>
                   </div>
                   <div class="flex items-center gap-2">
-                    <span v-if="selectedDestinationId === place.id" class="text-[9px] font-mono text-phorayana-accent">TERPILIH</span>
+                    <span v-if="endPlaceId === place.id" class="text-[9px] font-mono text-phorayana-accent font-bold">TUJUAN</span>
                     <button 
                       @click.stop="deleteSavedPlace(place.id)"
                       :disabled="isLoadingPlaces"
@@ -247,17 +300,20 @@ const isTracking = ref(false)
 const elapsedTime = ref(0)
 const selectedVehicle = ref('motor')
 const activeTripId = ref(null)
+const activeTripStartTime = ref(null)
 const isLoadingGeo = ref(false)
 const errorMessage = ref('')
+const infoMessage = ref('')
 let timerInterval = null
 
 // Tracking Engine State
 const routePath = ref([])
 let watchId = null
 
-// Saved Places CRUD State
+// Saved Places & Route State
 const savedPlaces = ref([])
-const selectedDestinationId = ref(null)
+const startPlaceId = ref(null)
+const endPlaceId = ref(null)
 const newPlaceName = ref('')
 const isLoadingPlaces = ref(false)
 
@@ -297,7 +353,7 @@ const initDashboard = async () => {
     // 3. Fetch running trip session including start coordinates and route path
     const { data, error } = await supabase
       .from('trips')
-      .select('id, start_time, vehicle_type, start_place_id, start_lat, start_lng, route_path')
+      .select('id, start_time, vehicle_type, start_place_id, end_place_id, start_lat, start_lng, route_path')
       .eq('user_id', userId.value)
       .eq('status', 'running')
       .order('start_time', { ascending: false })
@@ -305,17 +361,25 @@ const initDashboard = async () => {
       .maybeSingle()
 
     if (data && !error) {
-      activeTripId.value = data.id
-      selectedVehicle.value = data.vehicle_type
-      selectedDestinationId.value = data.start_place_id
-      isTracking.value = true
-      routePath.value = data.route_path || []
-      if (routePath.value.length === 0 && data.start_lat && data.start_lng) {
-        routePath.value.push({
-          lat: data.start_lat,
-          lng: data.start_lng,
-          t: data.start_time
-        })
+      // Only set from DB if not already hydrated from localStorage (which is newer)
+      if (!activeTripId.value || activeTripId.value === data.id) {
+        activeTripId.value = data.id
+        selectedVehicle.value = data.vehicle_type
+        startPlaceId.value = data.start_place_id
+        endPlaceId.value = data.end_place_id
+        isTracking.value = true
+        activeTripStartTime.value = data.start_time
+        
+        if (routePath.value.length === 0) {
+          routePath.value = data.route_path || []
+          if (routePath.value.length === 0 && data.start_lat && data.start_lng) {
+            routePath.value.push({
+              lat: data.start_lat,
+              lng: data.start_lng,
+              t: data.start_time
+            })
+          }
+        }
       }
 
       const startTime = new Date(data.start_time).getTime()
@@ -348,13 +412,17 @@ const resetState = () => {
   elapsedTime.value = 0
   selectedVehicle.value = 'motor'
   activeTripId.value = null
+  activeTripStartTime.value = null
   isLoadingGeo.value = false
   errorMessage.value = ''
+  infoMessage.value = ''
   savedPlaces.value = []
-  selectedDestinationId.value = null
+  startPlaceId.value = null
+  endPlaceId.value = null
   newPlaceName.value = ''
   isLoadingPlaces.value = false
   routePath.value = []
+  clearTrackingStorage()
 }
 
 // Watch user to initialize dashboard once session is populated, or reset it upon logout
@@ -422,6 +490,74 @@ const calculateTotalDistance = (path) => {
   return total
 }
 
+// LocalStorage Mirroring: Clear stored session
+const clearTrackingStorage = () => {
+  if (import.meta.client) {
+    localStorage.removeItem('wpy_active_trip_id')
+    localStorage.removeItem('wpy_active_route_path')
+    localStorage.removeItem('wpy_start_place_id')
+    localStorage.removeItem('wpy_end_place_id')
+  }
+}
+
+// LocalStorage Mirroring: Rehydrate stored session on mount
+const initActiveTripSession = () => {
+  if (!import.meta.client) return
+  const storedTripId = localStorage.getItem('wpy_active_trip_id')
+  const storedRoutePath = localStorage.getItem('wpy_active_route_path')
+  const storedStartPlaceId = localStorage.getItem('wpy_start_place_id')
+  const storedEndPlaceId = localStorage.getItem('wpy_end_place_id')
+  
+  if (storedTripId && storedRoutePath) {
+    try {
+      activeTripId.value = storedTripId
+      routePath.value = JSON.parse(storedRoutePath)
+      isTracking.value = true
+      startPlaceId.value = storedStartPlaceId ? Number(storedStartPlaceId) : null
+      endPlaceId.value = storedEndPlaceId ? Number(storedEndPlaceId) : null
+      startGPSTracking()
+    } catch (e) {
+      console.error('Error rehydrating stored route path:', e)
+    }
+  }
+}
+
+// Sync queued offline check-outs to Supabase when connection is back
+const syncOfflineQueue = async () => {
+  if (!import.meta.client || !navigator.onLine) return
+  const queueStr = localStorage.getItem('wpy_offline_sync_queue')
+  if (!queueStr) return
+
+  try {
+    const queue = JSON.parse(queueStr)
+    if (queue.length === 0) return
+
+    const remainingQueue = []
+    for (const item of queue) {
+      const { tripId, payload } = item
+      const { error } = await supabase
+        .from('trips')
+        .update(payload)
+        .eq('id', tripId)
+      
+      if (error) {
+        console.error(`Failed to sync trip #${tripId} from offline queue:`, error.message)
+        remainingQueue.push(item)
+      }
+    }
+
+    if (remainingQueue.length > 0) {
+      localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(remainingQueue))
+    } else {
+      localStorage.removeItem('wpy_offline_sync_queue')
+      infoMessage.value = 'Seluruh data perjalanan offline berhasil disinkronisasikan!'
+      setTimeout(() => { infoMessage.value = '' }, 5000)
+    }
+  } catch (e) {
+    console.error('Error syncing offline queue:', e)
+  }
+}
+
 // Start watching GPS position to log breadcrumbs/path
 const startGPSTracking = () => {
   if (watchId !== null) return
@@ -429,6 +565,12 @@ const startGPSTracking = () => {
 
   watchId = navigator.geolocation.watchPosition(
     (position) => {
+      // 1. Filter GPS Jitter: Ignore if accuracy is low (accuracy > 30 meters)
+      if (position.coords.accuracy > 30) {
+        console.warn('GPS accuracy low (jitter filter):', position.coords.accuracy)
+        return
+      }
+
       const lat = position.coords.latitude
       const lng = position.coords.longitude
       const t = new Date().toISOString()
@@ -443,6 +585,16 @@ const startGPSTracking = () => {
         }
       }
       routePath.value.push(newCoord)
+
+      // 2. LocalStorage Mirroring (Antiloss)
+      if (import.meta.client) {
+        localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
+        if (activeTripId.value) {
+          localStorage.setItem('wpy_active_trip_id', activeTripId.value)
+          if (startPlaceId.value) localStorage.setItem('wpy_start_place_id', String(startPlaceId.value))
+          if (endPlaceId.value) localStorage.setItem('wpy_end_place_id', String(endPlaceId.value))
+        }
+      }
     },
     (err) => {
       console.error('watchPosition error:', err)
@@ -457,6 +609,7 @@ const startGPSTracking = () => {
 
 // Select default vehicle and update profiles
 const selectVehicle = async (vehicle) => {
+  if (isTracking.value) return // JIJAK ter-lock saat tracking
   selectedVehicle.value = vehicle
   if (!user.value) return
 
@@ -558,7 +711,7 @@ const startTrip = async () => {
         start_time: startTimeStr,
         start_lat: coords.lat,
         start_lng: coords.lng,
-        start_place_id: selectedDestinationId.value,
+        start_place_id: startPlaceId.value,
         status: 'running'
       })
       .select('id')
@@ -569,8 +722,17 @@ const startTrip = async () => {
     activeTripId.value = data.id
     isTracking.value = true
     elapsedTime.value = 0
+    activeTripStartTime.value = startTimeStr
     routePath.value = [{ lat: coords.lat, lng: coords.lng, t: startTimeStr }]
     
+    // LocalStorage Mirroring (Antiloss) on trip start
+    if (import.meta.client) {
+      localStorage.setItem('wpy_active_trip_id', data.id)
+      localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
+      if (startPlaceId.value) localStorage.setItem('wpy_start_place_id', String(startPlaceId.value))
+      if (endPlaceId.value) localStorage.setItem('wpy_end_place_id', String(endPlaceId.value))
+    }
+
     timerInterval = setInterval(() => {
       elapsedTime.value++
     }, 1000)
@@ -589,46 +751,115 @@ const endTrip = async () => {
   if (!activeTripId.value) return
   isLoadingGeo.value = true
   errorMessage.value = ''
+  infoMessage.value = ''
 
   try {
-    const coords = await getGPSCoordinates()
-    
-    // Add final destination coordinate to routePath
-    routePath.value.push({
-      lat: coords.lat,
-      lng: coords.lng,
-      t: new Date().toISOString()
-    })
-
-    // Stop watchPosition tracking
+    // 1. Hentikan watchPosition dan bersihkan interval timer
     if (watchId !== null) {
       navigator.geolocation.clearWatch(watchId)
       watchId = null
     }
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
 
+    // 2. Ambil koordinat GPS akhir
+    const coords = await getGPSCoordinates()
+    const endTimeStr = new Date().toISOString()
+    
+    // Masukkan koordinat akhir ke dalam routePath
+    routePath.value.push({
+      lat: coords.lat,
+      lng: coords.lng,
+      t: endTimeStr
+    })
+
+    // Update LocalStorage Mirroring sebelum push ke DB
+    if (import.meta.client) {
+      localStorage.setItem('wpy_active_route_path', JSON.stringify(routePath.value))
+    }
+
+    // 3. Kalkulasi Metrik Akhir
     const finalDistance = calculateTotalDistance(routePath.value)
+    const startTime = activeTripStartTime.value ? new Date(activeTripStartTime.value).getTime() : (new Date().getTime() - elapsedTime.value * 1000)
+    const now = new Date().getTime()
+    const durationMinutes = Math.max(1, Math.ceil((now - startTime) / 60000))
 
-    const { error } = await supabase
-      .from('trips')
-      .update({
-        end_time: new Date().toISOString(),
-        end_lat: coords.lat,
-        end_lng: coords.lng,
-        end_place_id: selectedDestinationId.value,
-        status: 'completed',
-        duration_minutes: Math.ceil(elapsedTime.value / 60),
-        distance_km: Number(finalDistance.toFixed(2)),
-        route_path: routePath.value
-      })
-      .eq('id', activeTripId.value)
+    // 4. Integrasi Cuaca (Open-Meteo API)
+    let weatherText = 'Cerah'
+    try {
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lng}&current=temperature_2m,weather_code`)
+      if (weatherRes.ok) {
+        const weatherData = await weatherRes.json()
+        const code = weatherData.current?.weather_code
+        const temp = weatherData.current?.temperature_2m
+        let condition = 'Cerah'
+        if (code >= 1 && code <= 3) condition = 'Berawan Sebagian'
+        else if (code === 45 || code === 48) condition = 'Kabut'
+        else if (code >= 51 && code <= 67) condition = 'Gerimis/Hujan Ringan'
+        else if (code >= 71 && code <= 86) condition = 'Salju'
+        else if (code >= 95) condition = 'Badai Petir'
+        weatherText = `${condition}, ${temp}°C`
+      }
+    } catch (err) {
+      console.warn('Failed to fetch weather from Open-Meteo:', err)
+      weatherText = 'Tidak diketahui'
+    }
 
-    if (error) throw error
+    // 5. Database Sync & Fallback Offline
+    const updatePayload = {
+      end_time: endTimeStr,
+      end_lat: coords.lat,
+      end_lng: coords.lng,
+      end_place_id: endPlaceId.value,
+      status: 'completed',
+      duration_minutes: durationMinutes,
+      distance_km: Number(finalDistance.toFixed(2)),
+      route_path: routePath.value,
+      weather_condition: weatherText
+    }
 
+    let syncSuccess = false
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase
+          .from('trips')
+          .update(updatePayload)
+          .eq('id', activeTripId.value)
+        
+        if (error) throw error
+        syncSuccess = true
+      } catch (dbErr) {
+        console.warn('Database write failed, fallback to offline queue:', dbErr.message)
+      }
+    }
+
+    if (!syncSuccess) {
+      // Masukkan ke antrean offline
+      if (import.meta.client) {
+        const queueStr = localStorage.getItem('wpy_offline_sync_queue')
+        const queue = queueStr ? JSON.parse(queueStr) : []
+        queue.push({
+          tripId: activeTripId.value,
+          payload: updatePayload
+        })
+        localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(queue))
+        infoMessage.value = 'Perjalanan disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online kembali.'
+      }
+    } else {
+      infoMessage.value = 'Perjalanan berhasil disinkronisasikan ke server!'
+      setTimeout(() => { infoMessage.value = '' }, 5000)
+    }
+
+    // Pembersihan state perjalanan aktif (baik sukses maupun masuk antrean offline)
     isTracking.value = false
     activeTripId.value = null
+    activeTripStartTime.value = null
     selectedDestinationId.value = null
     routePath.value = []
-    if (timerInterval) clearInterval(timerInterval)
+    clearTrackingStorage()
+
   } catch (err) {
     errorMessage.value = err.message || 'Gagal mengakhiri perjalanan.'
     console.error(err)
@@ -645,10 +876,22 @@ const formatTime = (seconds) => {
   return `${h}:${m}:${s}`
 }
 
+onMounted(() => {
+  initActiveTripSession()
+  syncOfflineQueue()
+  
+  if (import.meta.client) {
+    window.addEventListener('online', syncOfflineQueue)
+  }
+})
+
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
   if (watchId !== null) {
     navigator.geolocation.clearWatch(watchId)
+  }
+  if (import.meta.client) {
+    window.removeEventListener('online', syncOfflineQueue)
   }
 })
 
