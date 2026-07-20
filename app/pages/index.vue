@@ -13,6 +13,12 @@
         <span class="hidden md:inline text-xs text-phorayana-text-secondary">
           Sesi aktif: <strong class="text-phorayana-text-primary font-mono">{{ user?.email }}</strong>
         </span>
+        <NuxtLink 
+          to="/history" 
+          class="bg-phorayana-surface hover:bg-phorayana-border border-2 border-black text-phorayana-text-primary text-xs font-bold py-2 px-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all duration-150 uppercase tracking-wider rounded-xl"
+        >
+          Riwayat
+        </NuxtLink>
         <button 
           @click="handleLogout" 
           :disabled="isLoggingOut"
