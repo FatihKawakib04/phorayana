@@ -380,7 +380,6 @@
 </template>
 
 <script setup>
-// ponytail: direct client queries, fat page component. ceiling: offline queries fail, index.vue is 560+ lines. upgrade: refactor logic to useSavedPlaces and build IndexedDB sync queue (Refactoring vs Offline-First Skala Prioritas)
 import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import { get, set, del } from 'idb-keyval'
 
@@ -412,11 +411,24 @@ const routePath = ref([])
 let watchId = null
 
 // Saved Places & Route State
-const savedPlaces = ref([])
+const {
+  savedPlaces,
+  isLoadingPlaces,
+  newPlaceName,
+  errorMessage: placesErrorMessage,
+  fetchSavedPlaces,
+  addSavedPlace: addSavedPlaceToDb,
+  deleteSavedPlace: deleteSavedPlaceFromDb
+} = useSavedPlaces()
+
 const startPlaceId = ref(null)
 const endPlaceId = ref(null)
-const newPlaceName = ref('')
-const isLoadingPlaces = ref(false)
+
+watch(placesErrorMessage, (newVal) => {
+  if (newVal) {
+    errorMessage.value = newVal
+  }
+})
 
 // Custom Dropdown State & Labels
 const isStartPlaceDropdownOpen = ref(false)
@@ -468,15 +480,7 @@ const initDashboard = async () => {
     }
 
     // 2. Fetch saved places list
-    const { data: places, error: placesError } = await supabase
-      .from('saved_places')
-      .select('*')
-      .eq('user_id', userId.value)
-      .order('created_at', { ascending: true })
-
-    if (places && !placesError) {
-      savedPlaces.value = places
-    }
+    await fetchSavedPlaces()
 
     // 3. Fetch running trip session including start coordinates and route path
     const { data, error } = await supabase
@@ -912,59 +916,19 @@ const toggleSelectPlace = (placeId) => {
 
 // Add a saved place using current GPS coordinates
 const addSavedPlace = async () => {
-  if (!newPlaceName.value.trim() || !user.value) return
-  isLoadingPlaces.value = true
-  errorMessage.value = ''
-
   try {
     const coords = await getGPSCoordinates()
-    const { data, error } = await supabase
-      .from('saved_places')
-      .insert({
-        user_id: userId.value,
-        place_name: newPlaceName.value.trim(),
-        latitude: coords.lat,
-        longitude: coords.lng
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    savedPlaces.value.push(data)
-    newPlaceName.value = ''
+    await addSavedPlaceToDb(coords)
   } catch (err) {
-    errorMessage.value = err.message || 'Gagal menambahkan lokasi.'
-    console.error(err)
-  } finally {
-    isLoadingPlaces.value = false
+    errorMessage.value = err.message || 'Gagal mengakses GPS untuk menyimpan lokasi.'
   }
 }
 
 // Delete a saved place
 const deleteSavedPlace = async (id) => {
-  if (!user.value) return
-  isLoadingPlaces.value = true
-  errorMessage.value = ''
-
-  try {
-    const { error } = await supabase
-      .from('saved_places')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId.value)
-
-    if (error) throw error
-
-    savedPlaces.value = savedPlaces.value.filter(place => place.id !== id)
-    if (selectedDestinationId.value === id) {
-      selectedDestinationId.value = null
-    }
-  } catch (err) {
-    errorMessage.value = err.message || 'Gagal menghapus lokasi.'
-    console.error(err)
-  } finally {
-    isLoadingPlaces.value = false
+  await deleteSavedPlaceFromDb(id)
+  if (selectedDestinationId.value === id) {
+    selectedDestinationId.value = null
   }
 }
 

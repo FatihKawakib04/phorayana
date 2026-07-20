@@ -252,6 +252,8 @@
 </template>
 
 <script setup>
+import { get } from 'idb-keyval'
+
 definePageMeta({
   middleware: ['god-auth']
 })
@@ -367,14 +369,11 @@ const pipelineMetrics = computed(() => {
   ]
 })
 
-// ponytail: naive offline queue size — assumes near-zero in dev; upgrade with real IDB read if needed
 const offlineQueueSize = ref(0)
 const offlineQueuePct = computed(() => Math.min((offlineQueueSize.value / 10) * 100, 100))
 
 onMounted(async () => {
-  // Try to read the real offline queue from IndexedDB
   try {
-    const { get } = await import('idb-keyval')
     const q = await get('wpy_offline_sync_queue')
     offlineQueueSize.value = Array.isArray(q) ? q.length : 0
   } catch {
