@@ -760,7 +760,8 @@ const submitManualFix = async () => {
       end_time: new Date().toISOString(),
       end_lat: endLat,
       end_lng: endLng,
-      route_path: routePath.value
+      route_path: routePath.value,
+      regional_event: detectRegionalEvent(new Date())
     }
 
     let syncSuccess = false
@@ -1070,7 +1071,8 @@ const endTrip = async () => {
       duration_minutes: durationMinutes,
       distance_km: Number(finalDistance.toFixed(2)),
       route_path: routePath.value,
-      weather_condition: weatherText
+      weather_condition: weatherText,
+      regional_event: detectRegionalEvent(endTimeStr)
     }
 
     let syncSuccess = false
