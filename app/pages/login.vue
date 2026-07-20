@@ -170,9 +170,13 @@ const handleAuth = async () => {
         throw new Error('Konfirmasi password tidak cocok!')
       }
       
+      const config = useRuntimeConfig()
       const { error } = await supabase.auth.signUp({
         email: email.value,
-        password: password.value
+        password: password.value,
+        options: {
+          emailRedirectTo: `${config.public.appUrl}/confirm`
+        }
       })
       if (error) throw error
       successMessage.value = 'Registrasi berhasil! Silakan cek email Anda untuk konfirmasi atau langsung masuk jika auto-confirm aktif.'
