@@ -46,7 +46,7 @@ export default defineNuxtConfig({
       navigateFallback: '/',
       runtimeCaching: [
         {
-          urlPattern: /^http:\/\/127\.0\.0\.1:54321\/rest\/v1\/trips.*/,
+          urlPattern: /^https:\/\/bagzjhigoulgbxejeayz\.supabase\.co\/rest\/v1\/trips.*/,
           handler: 'NetworkOnly',
           method: 'POST',
           options: {
@@ -59,7 +59,7 @@ export default defineNuxtConfig({
           }
         },
         {
-          urlPattern: /^http:\/\/127\.0\.0\.1:54321\/rest\/v1\/trips.*/,
+          urlPattern: /^https:\/\/bagzjhigoulgbxejeayz\.supabase\.co\/rest\/v1\/trips.*/,
           handler: 'NetworkOnly',
           method: 'PATCH',
           options: {
