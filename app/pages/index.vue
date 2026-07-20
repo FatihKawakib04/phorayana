@@ -421,6 +421,7 @@ const isLoadingPlaces = ref(false)
 // Custom Dropdown State & Labels
 const isStartPlaceDropdownOpen = ref(false)
 const isEndPlaceDropdownOpen = ref(false)
+const authSubscription = ref(null)
 
 const startPlaceLabel = computed(() => {
   if (startPlaceId.value === null) return 'Gunakan Lokasi Saat Ini (Instant GPS)'
@@ -711,7 +712,14 @@ const syncOfflineQueue = async () => {
     if (!queue || queue.length === 0) return
 
     const remainingQueue = []
+    let authErrorEncountered = false
+
     for (const item of queue) {
+      if (authErrorEncountered) {
+        remainingQueue.push(item)
+        continue
+      }
+
       const { tripId, payload } = item
       const { error } = await supabase
         .from('trips')
@@ -719,13 +727,25 @@ const syncOfflineQueue = async () => {
         .eq('id', tripId)
       
       if (error) {
-        console.error(`Failed to sync trip #${tripId} from offline queue:`, error.message)
-        remainingQueue.push(item)
+        const isAuthError = error.status === 401 || 
+                            error.message?.includes('JWT expired') || 
+                            error.message?.includes('token expired') || 
+                            error.message?.includes('Invalid token') ||
+                            error.code === 'PGRST301';
+
+        if (isAuthError) {
+          console.warn(`Auth token expired/unauthorized while syncing trip #${tripId}. Keeping queue intact for retry on token refresh.`, error)
+          authErrorEncountered = true
+          remainingQueue.push(item)
+        } else {
+          console.error(`Failed to sync trip #${tripId} from offline queue:`, error.message)
+          remainingQueue.push(item)
+        }
       }
     }
 
     if (remainingQueue.length > 0) {
-      await set('wpy_offline_sync_queue', remainingQueue)
+      await set('wpy_offline_sync_queue', JSON.parse(JSON.stringify(remainingQueue)))
     } else {
       await del('wpy_offline_sync_queue')
       infoMessage.value = 'Seluruh data perjalanan offline berhasil disinkronisasikan!'
@@ -1141,6 +1161,15 @@ onMounted(() => {
   if (import.meta.client) {
     window.addEventListener('online', syncOfflineQueue)
     window.addEventListener('click', closePlaceDropdowns)
+
+    // Listen for auth state changes (token refreshed or signed in) to retry offline sync
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && session) {
+        console.log(`Auth event: ${event}. Retrying offline queue sync...`)
+        syncOfflineQueue()
+      }
+    })
+    authSubscription.value = subscription
   }
 })
 
@@ -1152,6 +1181,9 @@ onUnmounted(() => {
   if (import.meta.client) {
     window.removeEventListener('online', syncOfflineQueue)
     window.removeEventListener('click', closePlaceDropdowns)
+    if (authSubscription.value) {
+      authSubscription.value.unsubscribe()
+    }
   }
 })
 
