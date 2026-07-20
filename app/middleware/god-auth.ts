@@ -14,14 +14,17 @@ export default defineNuxtRouteMiddleware(async () => {
   }
 
   // Fetch the user's role from the profiles table
-  const { data } = await supabase
+  const { data } = await (supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .maybeSingle()
+    .maybeSingle() as any)
 
   // Only the 'god' role passes; everyone else is redirected
   if (!data || data.role !== 'god') {
     return navigateTo('/')
   }
 })
+
+
+

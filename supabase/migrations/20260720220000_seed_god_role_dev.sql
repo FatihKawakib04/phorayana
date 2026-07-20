@@ -9,4 +9,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO service_role;
 -- (The trigger checks auth.uid() which is NULL for direct SQL execution, so this will succeed)
 UPDATE public.profiles
 SET role = 'god'
-WHERE id = 'd248ebc8-90e6-42b9-be75-9b707d368a14';
+WHERE id IN (
+  SELECT id FROM auth.users WHERE email = 'testuser@example.com'
+);
+
