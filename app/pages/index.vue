@@ -231,6 +231,7 @@
 </template>
 
 <script setup>
+// ponytail: direct client queries, fat page component. ceiling: offline queries fail, index.vue is 560+ lines. upgrade: refactor logic to useSavedPlaces and build IndexedDB sync queue (Refactoring vs Offline-First Skala Prioritas)
 import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 
 const supabase = useSupabaseClient()
