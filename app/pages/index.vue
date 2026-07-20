@@ -86,9 +86,55 @@
             </div>
           </div>
 
-          <!-- Central Viewport: The Macro Button -->
+          <!-- Central Viewport: The Macro Button OR Manual Fix Form -->
           <div class="flex flex-col items-center justify-center my-auto py-6">
+            <!-- Case 1: Timeout Manual Fix Form -->
+            <div 
+              v-if="isTimeout" 
+              class="w-full max-w-md bg-phorayana-surface border-2 border-black p-6 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-center animate-fade-in"
+            >
+              <div class="w-12 h-12 bg-phorayana-alert/20 text-phorayana-alert flex items-center justify-center rounded-xl mx-auto mb-4 border border-phorayana-alert/40">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-phorayana-text-primary mb-2">
+                Lupa Check-Out Terdeteksi
+              </h3>
+              <p class="text-xs text-phorayana-text-secondary mb-4 leading-relaxed">
+                Kamu lupa mengakhiri perjalanan sebelumnya (>3 jam). Silakan masukkan durasi riil perjalananmu untuk menyelesaikan log ini:
+              </p>
+              
+              <form @submit.prevent="submitManualFix" class="space-y-4 text-left">
+                <div>
+                  <label for="manual-duration" class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+                    Durasi Perjalanan (Menit, Maks. 120)
+                  </label>
+                  <input 
+                    id="manual-duration"
+                    v-model="manualDurationMinutes"
+                    type="number"
+                    min="1"
+                    max="120"
+                    required
+                    placeholder="Contoh: 30"
+                    class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2.5 text-xs rounded-xl focus:outline-none focus:border-phorayana-accent transition-colors"
+                  />
+                </div>
+                
+                <button 
+                  type="submit"
+                  :disabled="isLoadingGeo"
+                  class="w-full bg-phorayana-primary hover:bg-[#b02f2d] text-phorayana-text-primary border-2 border-black font-bold py-3 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all duration-150 uppercase tracking-wider text-xs"
+                >
+                  {{ isLoadingGeo ? 'Menyimpan...' : 'Simpan Perbaikan Log' }}
+                </button>
+              </form>
+            </div>
+
+            <!-- Case 2: Normal Macro Button -->
             <button 
+              v-else
               @click="isTracking ? endTrip() : startTrip()"
               :disabled="isLoadingGeo || isLoggingOut || isLoadingPlaces"
               :class="[
@@ -158,38 +204,88 @@
             
             <div class="space-y-4">
               <!-- Dropdown Asal -->
-              <div>
-                <label for="start-place-select" class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+              <div class="relative place-dropdown-container">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
                   Titik Keberangkatan (Asal)
                 </label>
-                <select 
-                  id="start-place-select"
-                  v-model="startPlaceId"
+                <button
+                  type="button"
                   :disabled="isTracking"
-                  class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary disabled:opacity-50"
+                  @click="isStartPlaceDropdownOpen = !isStartPlaceDropdownOpen; isEndPlaceDropdownOpen = false"
+                  class="w-full bg-phorayana-base border-2 border-phorayana-border text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary disabled:opacity-50 transition-colors flex justify-between items-center text-left"
                 >
-                  <option :value="null">Gunakan Lokasi Saat Ini (Instant GPS)</option>
-                  <option v-for="place in savedPlaces" :key="place.id" :value="place.id">
+                  <span class="truncate">{{ startPlaceLabel }}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-phorayana-text-secondary flex-shrink-0 transition-transform duration-150" :class="{ 'rotate-180': isStartPlaceDropdownOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div 
+                  v-if="isStartPlaceDropdownOpen && !isTracking" 
+                  class="absolute z-50 w-full mt-1 bg-phorayana-surface border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto"
+                >
+                  <div 
+                    @click="startPlaceId = null; isStartPlaceDropdownOpen = false"
+                    :class="[
+                      'px-3 py-2.5 text-xs cursor-pointer transition-colors',
+                      startPlaceId === null ? 'bg-[#333333] text-phorayana-accent font-bold' : 'text-phorayana-text-primary hover:bg-[#333333] hover:text-phorayana-accent'
+                    ]"
+                  >
+                    Gunakan Lokasi Saat Ini (Instant GPS)
+                  </div>
+                  <div 
+                    v-for="place in savedPlaces" 
+                    :key="place.id" 
+                    @click="startPlaceId = place.id; isStartPlaceDropdownOpen = false"
+                    :class="[
+                      'px-3 py-2.5 text-xs cursor-pointer transition-colors border-t border-[#333333]',
+                      startPlaceId === place.id ? 'bg-[#333333] text-phorayana-accent font-bold' : 'text-phorayana-text-primary hover:bg-[#333333] hover:text-phorayana-accent'
+                    ]"
+                  >
                     {{ place.place_name }}
-                  </option>
-                </select>
+                  </div>
+                </div>
               </div>
 
               <!-- Dropdown Tujuan -->
-              <div>
-                <label for="end-place-select" class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
+              <div class="relative place-dropdown-container">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-phorayana-text-secondary mb-1">
                   Titik Kedatangan (Tujuan)
                 </label>
-                <select 
-                  id="end-place-select"
-                  v-model="endPlaceId"
-                  class="w-full bg-phorayana-base border-2 border-black text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary"
+                <button
+                  type="button"
+                  @click="isEndPlaceDropdownOpen = !isEndPlaceDropdownOpen; isStartPlaceDropdownOpen = false"
+                  class="w-full bg-phorayana-base border-2 border-phorayana-border text-phorayana-text-primary px-3 py-2 text-xs rounded-xl focus:outline-none focus:border-phorayana-primary transition-colors flex justify-between items-center text-left"
                 >
-                  <option :value="null">Gunakan Lokasi Saat Ini (Instant GPS)</option>
-                  <option v-for="place in savedPlaces" :key="place.id" :value="place.id">
+                  <span class="truncate">{{ endPlaceLabel }}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-phorayana-text-secondary flex-shrink-0 transition-transform duration-150" :class="{ 'rotate-180': isEndPlaceDropdownOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div 
+                  v-if="isEndPlaceDropdownOpen" 
+                  class="absolute z-50 w-full mt-1 bg-phorayana-surface border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto"
+                >
+                  <div 
+                    @click="endPlaceId = null; isEndPlaceDropdownOpen = false"
+                    :class="[
+                      'px-3 py-2.5 text-xs cursor-pointer transition-colors',
+                      endPlaceId === null ? 'bg-[#333333] text-phorayana-accent font-bold' : 'text-phorayana-text-primary hover:bg-[#333333] hover:text-phorayana-accent'
+                    ]"
+                  >
+                    Gunakan Lokasi Saat Ini (Instant GPS)
+                  </div>
+                  <div 
+                    v-for="place in savedPlaces" 
+                    :key="place.id" 
+                    @click="endPlaceId = place.id; isEndPlaceDropdownOpen = false"
+                    :class="[
+                      'px-3 py-2.5 text-xs cursor-pointer transition-colors border-t border-[#333333]',
+                      endPlaceId === place.id ? 'bg-[#333333] text-phorayana-accent font-bold' : 'text-phorayana-text-primary hover:bg-[#333333] hover:text-phorayana-accent'
+                    ]"
+                  >
                     {{ place.place_name }}
-                  </option>
-                </select>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -228,7 +324,7 @@
                     <button 
                       @click.stop="deleteSavedPlace(place.id)"
                       :disabled="isLoadingPlaces"
-                      class="text-phorayana-alert hover:text-red-500 font-bold px-2 py-1 border border-black hover:border-red-500 rounded-lg text-[9px] bg-phorayana-surface active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
+                      class="text-phorayana-alert hover:text-phorayana-primary font-bold px-2 py-1 border border-black hover:border-phorayana-primary rounded-lg text-[9px] bg-phorayana-surface active:translate-x-0.5 active:translate-y-0.5 transition-all disabled:opacity-50"
                     >
                       Hapus
                     </button>
@@ -306,6 +402,10 @@ const errorMessage = ref('')
 const infoMessage = ref('')
 let timerInterval = null
 
+// Timeout Manual Fix State
+const isTimeout = ref(false)
+const manualDurationMinutes = ref(null)
+
 // Tracking Engine State
 const routePath = ref([])
 let watchId = null
@@ -316,6 +416,32 @@ const startPlaceId = ref(null)
 const endPlaceId = ref(null)
 const newPlaceName = ref('')
 const isLoadingPlaces = ref(false)
+
+// Custom Dropdown State & Labels
+const isStartPlaceDropdownOpen = ref(false)
+const isEndPlaceDropdownOpen = ref(false)
+
+const startPlaceLabel = computed(() => {
+  if (startPlaceId.value === null) return 'Gunakan Lokasi Saat Ini (Instant GPS)'
+  const place = savedPlaces.value.find(p => p.id === Number(startPlaceId.value))
+  return place ? place.place_name : 'Gunakan Lokasi Saat Ini (Instant GPS)'
+})
+
+const endPlaceLabel = computed(() => {
+  if (endPlaceId.value === null) return 'Gunakan Lokasi Saat Ini (Instant GPS)'
+  const place = savedPlaces.value.find(p => p.id === Number(endPlaceId.value))
+  return place ? place.place_name : 'Gunakan Lokasi Saat Ini (Instant GPS)'
+})
+
+// Close dropdowns on click outside
+const closePlaceDropdowns = (e) => {
+  if (import.meta.client) {
+    if (!e.target.closest('.place-dropdown-container')) {
+      isStartPlaceDropdownOpen.value = false
+      isEndPlaceDropdownOpen.value = false
+    }
+  }
+}
 
 // Protect the page from unauthenticated access
 watchEffect(() => {
@@ -361,37 +487,65 @@ const initDashboard = async () => {
       .maybeSingle()
 
     if (data && !error) {
-      // Only set from DB if not already hydrated from localStorage (which is newer)
-      if (!activeTripId.value || activeTripId.value === data.id) {
+      const startTime = new Date(data.start_time).getTime()
+      const now = new Date().getTime()
+      const elapsedSecs = Math.max(0, Math.floor((now - startTime) / 1000))
+
+      // Deteksi Timeout Otomatis (> 3 Jam)
+      if (elapsedSecs > 10800) {
         activeTripId.value = data.id
         selectedVehicle.value = data.vehicle_type
         startPlaceId.value = data.start_place_id
         endPlaceId.value = data.end_place_id
-        isTracking.value = true
         activeTripStartTime.value = data.start_time
-        
+        isTracking.value = false
+        isTimeout.value = true
+        if (import.meta.client) {
+          if (timerInterval) clearInterval(timerInterval)
+          if (watchId !== null && typeof navigator !== 'undefined') {
+            navigator.geolocation.clearWatch(watchId)
+            watchId = null
+          }
+        }
         if (routePath.value.length === 0) {
           routePath.value = data.route_path || []
           if (routePath.value.length === 0 && data.start_lat && data.start_lng) {
-            routePath.value.push({
-              lat: data.start_lat,
-              lng: data.start_lng,
-              t: data.start_time
-            })
+            routePath.value.push({ lat: data.start_lat, lng: data.start_lng, t: data.start_time })
           }
         }
+      } else {
+        // Only set from DB if not already hydrated from localStorage (which is newer)
+        if (!activeTripId.value || activeTripId.value === data.id) {
+          activeTripId.value = data.id
+          selectedVehicle.value = data.vehicle_type
+          startPlaceId.value = data.start_place_id
+          endPlaceId.value = data.end_place_id
+          isTracking.value = true
+          activeTripStartTime.value = data.start_time
+          
+          if (routePath.value.length === 0) {
+            routePath.value = data.route_path || []
+            if (routePath.value.length === 0 && data.start_lat && data.start_lng) {
+              routePath.value.push({
+                lat: data.start_lat,
+                lng: data.start_lng,
+                t: data.start_time
+              })
+            }
+          }
+        }
+
+        elapsedTime.value = elapsedSecs
+
+        if (import.meta.client) {
+          if (timerInterval) clearInterval(timerInterval)
+          timerInterval = setInterval(() => {
+            elapsedTime.value++
+          }, 1000)
+
+          startGPSTracking()
+        }
       }
-
-      const startTime = new Date(data.start_time).getTime()
-      const now = new Date().getTime()
-      elapsedTime.value = Math.max(0, Math.floor((now - startTime) / 1000))
-
-      if (timerInterval) clearInterval(timerInterval)
-      timerInterval = setInterval(() => {
-        elapsedTime.value++
-      }, 1000)
-
-      startGPSTracking()
     }
   } catch (err) {
     console.error('Failed to initialize dashboard session:', err.message)
@@ -400,13 +554,15 @@ const initDashboard = async () => {
 
 // Reset state variables to default values when user session is cleared (logout/expiration)
 const resetState = () => {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId)
-    watchId = null
+  if (import.meta.client) {
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
+    if (watchId !== null && typeof navigator !== 'undefined') {
+      navigator.geolocation.clearWatch(watchId)
+      watchId = null
+    }
   }
   isTracking.value = false
   elapsedTime.value = 0
@@ -416,6 +572,8 @@ const resetState = () => {
   isLoadingGeo.value = false
   errorMessage.value = ''
   infoMessage.value = ''
+  isTimeout.value = false
+  manualDurationMinutes.value = null
   savedPlaces.value = []
   startPlaceId.value = null
   endPlaceId.value = null
@@ -510,8 +668,26 @@ const initActiveTripSession = () => {
   
   if (storedTripId && storedRoutePath) {
     try {
+      const path = JSON.parse(storedRoutePath)
+      if (path.length > 0) {
+        const startTimeStr = path[0].t
+        const startTime = new Date(startTimeStr).getTime()
+        const now = new Date().getTime()
+        if (now - startTime > 10800 * 1000) {
+          // Timeout detected!
+          activeTripId.value = storedTripId
+          activeTripStartTime.value = startTimeStr
+          routePath.value = path
+          startPlaceId.value = storedStartPlaceId ? Number(storedStartPlaceId) : null
+          endPlaceId.value = storedEndPlaceId ? Number(storedEndPlaceId) : null
+          isTracking.value = false
+          isTimeout.value = true
+          return
+        }
+      }
+      
       activeTripId.value = storedTripId
-      routePath.value = JSON.parse(storedRoutePath)
+      routePath.value = path
       isTracking.value = true
       startPlaceId.value = storedStartPlaceId ? Number(storedStartPlaceId) : null
       endPlaceId.value = storedEndPlaceId ? Number(storedEndPlaceId) : null
@@ -555,6 +731,78 @@ const syncOfflineQueue = async () => {
     }
   } catch (e) {
     console.error('Error syncing offline queue:', e)
+  }
+}
+
+// Submit manual fix for a timed-out trip
+const submitManualFix = async () => {
+  if (!activeTripId.value || !manualDurationMinutes.value) return
+  isLoadingGeo.value = true
+  errorMessage.value = ''
+  infoMessage.value = ''
+
+  const clampedMinutes = Math.min(120, Math.max(1, Number(manualDurationMinutes.value)))
+
+  try {
+    let endLat = null
+    let endLng = null
+    if (routePath.value.length > 0) {
+      const last = routePath.value[routePath.value.length - 1]
+      endLat = last.lat
+      endLng = last.lng
+    }
+
+    const updatePayload = {
+      status: 'manual_fix',
+      duration_minutes: clampedMinutes,
+      end_time: new Date().toISOString(),
+      end_lat: endLat,
+      end_lng: endLng,
+      route_path: routePath.value
+    }
+
+    let syncSuccess = false
+    if (navigator.onLine) {
+      try {
+        const { error } = await supabase
+          .from('trips')
+          .update(updatePayload)
+          .eq('id', activeTripId.value)
+        
+        if (error) throw error
+        syncSuccess = true
+      } catch (dbErr) {
+        console.warn('Database manual fix write failed, fallback to offline queue:', dbErr.message)
+      }
+    }
+
+    if (!syncSuccess) {
+      if (import.meta.client) {
+        const queueStr = localStorage.getItem('wpy_offline_sync_queue')
+        const queue = queueStr ? JSON.parse(queueStr) : []
+        queue.push({
+          tripId: activeTripId.value,
+          payload: updatePayload
+        })
+        localStorage.setItem('wpy_offline_sync_queue', JSON.stringify(queue))
+        infoMessage.value = 'Perbaikan manual disimpan secara lokal karena masalah jaringan. Data akan disinkronisasikan otomatis saat online.'
+      }
+    } else {
+      infoMessage.value = 'Perjalanan berhasil diperbaiki secara manual!'
+      setTimeout(() => { infoMessage.value = '' }, 5000)
+    }
+
+    isTimeout.value = false
+    isTracking.value = false
+    activeTripId.value = null
+    activeTripStartTime.value = null
+    routePath.value = []
+    clearTrackingStorage()
+  } catch (err) {
+    errorMessage.value = err.message || 'Gagal menyimpan perbaikan manual.'
+    console.error(err)
+  } finally {
+    isLoadingGeo.value = false
   }
 }
 
@@ -882,6 +1130,7 @@ onMounted(() => {
   
   if (import.meta.client) {
     window.addEventListener('online', syncOfflineQueue)
+    window.addEventListener('click', closePlaceDropdowns)
   }
 })
 
@@ -892,6 +1141,7 @@ onUnmounted(() => {
   }
   if (import.meta.client) {
     window.removeEventListener('online', syncOfflineQueue)
+    window.removeEventListener('click', closePlaceDropdowns)
   }
 })
 
