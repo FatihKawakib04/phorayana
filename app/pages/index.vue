@@ -251,6 +251,10 @@ const isLoadingGeo = ref(false)
 const errorMessage = ref('')
 let timerInterval = null
 
+// Tracking Engine State
+const routePath = ref([])
+let watchId = null
+
 // Saved Places CRUD State
 const savedPlaces = ref([])
 const selectedDestinationId = ref(null)
@@ -290,10 +294,10 @@ const initDashboard = async () => {
       savedPlaces.value = places
     }
 
-    // 3. Fetch running trip session
+    // 3. Fetch running trip session including start coordinates and route path
     const { data, error } = await supabase
       .from('trips')
-      .select('id, start_time, vehicle_type, start_place_id')
+      .select('id, start_time, vehicle_type, start_place_id, start_lat, start_lng, route_path')
       .eq('user_id', userId.value)
       .eq('status', 'running')
       .order('start_time', { ascending: false })
@@ -305,6 +309,14 @@ const initDashboard = async () => {
       selectedVehicle.value = data.vehicle_type
       selectedDestinationId.value = data.start_place_id
       isTracking.value = true
+      routePath.value = data.route_path || []
+      if (routePath.value.length === 0 && data.start_lat && data.start_lng) {
+        routePath.value.push({
+          lat: data.start_lat,
+          lng: data.start_lng,
+          t: data.start_time
+        })
+      }
 
       const startTime = new Date(data.start_time).getTime()
       const now = new Date().getTime()
@@ -314,6 +326,8 @@ const initDashboard = async () => {
       timerInterval = setInterval(() => {
         elapsedTime.value++
       }, 1000)
+
+      startGPSTracking()
     }
   } catch (err) {
     console.error('Failed to initialize dashboard session:', err.message)
@@ -326,6 +340,10 @@ const resetState = () => {
     clearInterval(timerInterval)
     timerInterval = null
   }
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId)
+    watchId = null
+  }
   isTracking.value = false
   elapsedTime.value = 0
   selectedVehicle.value = 'motor'
@@ -336,6 +354,7 @@ const resetState = () => {
   selectedDestinationId.value = null
   newPlaceName.value = ''
   isLoadingPlaces.value = false
+  routePath.value = []
 }
 
 // Watch user to initialize dashboard once session is populated, or reset it upon logout
@@ -375,6 +394,65 @@ const getGPSCoordinates = () => {
       }
     )
   })
+}
+
+// Calculate distance between two coordinates in kilometers using Haversine formula
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371 // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+// Calculate total distance of the path in kilometers
+const calculateTotalDistance = (path) => {
+  if (!path || path.length < 2) return 0
+  let total = 0
+  for (let i = 0; i < path.length - 1; i++) {
+    total += calculateHaversineDistance(
+      path[i].lat, path[i].lng,
+      path[i+1].lat, path[i+1].lng
+    )
+  }
+  return total
+}
+
+// Start watching GPS position to log breadcrumbs/path
+const startGPSTracking = () => {
+  if (watchId !== null) return
+  if (!navigator.geolocation) return
+
+  watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      const lat = position.coords.latitude
+      const lng = position.coords.longitude
+      const t = new Date().toISOString()
+      const newCoord = { lat, lng, t }
+      
+      // Filter: only record if moved more than 10 meters (0.01 km)
+      if (routePath.value.length > 0) {
+        const last = routePath.value[routePath.value.length - 1]
+        const dist = calculateHaversineDistance(last.lat, last.lng, lat, lng)
+        if (dist < 0.01) {
+          return
+        }
+      }
+      routePath.value.push(newCoord)
+    },
+    (err) => {
+      console.error('watchPosition error:', err)
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  )
 }
 
 // Select default vehicle and update profiles
@@ -471,12 +549,13 @@ const startTrip = async () => {
 
   try {
     const coords = await getGPSCoordinates()
+    const startTimeStr = new Date().toISOString()
     const { data, error } = await supabase
       .from('trips')
       .insert({
         user_id: userId.value,
         vehicle_type: selectedVehicle.value,
-        start_time: new Date().toISOString(),
+        start_time: startTimeStr,
         start_lat: coords.lat,
         start_lng: coords.lng,
         start_place_id: selectedDestinationId.value,
@@ -490,9 +569,13 @@ const startTrip = async () => {
     activeTripId.value = data.id
     isTracking.value = true
     elapsedTime.value = 0
+    routePath.value = [{ lat: coords.lat, lng: coords.lng, t: startTimeStr }]
+    
     timerInterval = setInterval(() => {
       elapsedTime.value++
     }, 1000)
+
+    startGPSTracking()
   } catch (err) {
     errorMessage.value = err.message || 'Gagal memulai perjalanan.'
     console.error(err)
@@ -509,6 +592,22 @@ const endTrip = async () => {
 
   try {
     const coords = await getGPSCoordinates()
+    
+    // Add final destination coordinate to routePath
+    routePath.value.push({
+      lat: coords.lat,
+      lng: coords.lng,
+      t: new Date().toISOString()
+    })
+
+    // Stop watchPosition tracking
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId)
+      watchId = null
+    }
+
+    const finalDistance = calculateTotalDistance(routePath.value)
+
     const { error } = await supabase
       .from('trips')
       .update({
@@ -517,7 +616,9 @@ const endTrip = async () => {
         end_lng: coords.lng,
         end_place_id: selectedDestinationId.value,
         status: 'completed',
-        duration_minutes: Math.ceil(elapsedTime.value / 60)
+        duration_minutes: Math.ceil(elapsedTime.value / 60),
+        distance_km: Number(finalDistance.toFixed(2)),
+        route_path: routePath.value
       })
       .eq('id', activeTripId.value)
 
@@ -526,6 +627,7 @@ const endTrip = async () => {
     isTracking.value = false
     activeTripId.value = null
     selectedDestinationId.value = null
+    routePath.value = []
     if (timerInterval) clearInterval(timerInterval)
   } catch (err) {
     errorMessage.value = err.message || 'Gagal mengakhiri perjalanan.'
@@ -545,6 +647,9 @@ const formatTime = (seconds) => {
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId)
+  }
 })
 
 const handleLogout = async () => {
