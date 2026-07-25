@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -17,22 +19,51 @@ export type Database = {
           full_name: string | null
           id: string
           last_vehicle_used: string | null
-          role: string | null
+          role_id: string
           updated_at: string | null
         }
         Insert: {
           full_name?: string | null
           id: string
           last_vehicle_used?: string | null
-          role?: string | null
+          role_id: string
           updated_at?: string | null
         }
         Update: {
           full_name?: string | null
           id?: string
           last_vehicle_used?: string | null
-          role?: string | null
+          role_id?: string
           updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -119,7 +150,7 @@ export type Database = {
           start_lng?: number
           start_place_id?: number | null
           start_time?: string
-          status?: string | null
+          status?: status?: string | null
           user_id?: string
           vehicle_type?: string
           weather_condition?: string | null
@@ -138,7 +169,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "saved_places"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }
