@@ -26,7 +26,7 @@ Variabel lingkungan berikut telah disuntikkan secara aman via MCP Netlify:
 | :--- | :--- | :--- |
 | `SUPABASE_URL` | `All` | `https://bagzjhigoulgbxejeayz.supabase.co` |
 | `SUPABASE_KEY` | `All` | Key Publishable / Anon Supabase |
-| `NODE_VERSION` | `All` | `"20"` |
+| `NODE_VERSION` | `All` | `"24"` |
 
 ---
 
