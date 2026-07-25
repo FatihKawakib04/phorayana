@@ -57,8 +57,8 @@ Menghapus referensi akun testing dummy legacy (seperti `testuser@example.com`) d
 
 ## 3. Task 3: Spesifikasi Fitur Email OTP Registration (PWA Ready)
 
-### 3.1. Alur Registrasi Email OTP (`verifyOtp`)
-Proses pendaftaran pengguna baru dirombak menjadi alur verifikasi 2-tahap:
+### 3.1. Alur Registrasi Email OTP & Fail-Safe State Machine (`verifyOtp`)
+Proses pendaftaran pengguna baru dirombak menjadi alur verifikasi 2-tahap yang aman dari serangan enumerasi dan kegagalan penanganan error:
 
 ```mermaid
 sequenceDiagram
@@ -69,26 +69,36 @@ sequenceDiagram
 
     User->>UI: Input Email & Password -> Klik Daftar
     UI->>Auth: supabase.auth.signUp({ email, password })
-    Auth-->>UI: Kirim Kode 6-Digit OTP ke Email Pengguna
-    UI->>UI: Buka State Modal OTP & Jalankan Timer 60s
-    User->>UI: Input Kode 6-Digit OTP -> Klik Verifikasi
+    alt Email Sudah Terdaftar
+        Auth-->>UI: Silent Ignore / Success Generic Response
+        UI-->>User: Tampilkan Pesan UI Generik (Anti-Enumeration) & Modal OTP
+    else Email Baru
+        Auth-->>UI: Kirim Kode 6-Digit OTP via SMTP
+        UI->>UI: Buka State Modal OTP & Lock Countdown Timer 60s
+    end
+
+    User->>UI: Input 6-Digit OTP -> Klik Verifikasi
     UI->>Auth: supabase.auth.verifyOtp({ email, token, type: 'signup' })
     alt Verifikasi OTP Sukses
         Auth-->>UI: Session Verified & JWT Issued
-        UI->>DB: Upsert Profile dengan role_id = ID Role 'user'
+        Auth->>DB: Auto-Trigger DB Profile (role_id = 'user')
         UI-->>User: Redirect ke Dashboard Utama (/)
     else Kode OTP Gagal / Expired
         Auth-->>UI: Return Error Verification Failed
-        UI-->>User: Tampilkan Pesan Kesalahan
+        UI-->>User: Tampilkan Error Badge (Non-Destructive State, Input Form Tetap Utuh)
     end
 ```
 
-### 3.2. Spesifikasi State UI pada `login.vue`
-1. **Form Registrasi**: Field Input Email & Password standar.
+### 3.2. Spesifikasi State UI & Safe Handling Strategy pada `login.vue`
+1. **Form Registrasi & Sanitasi Input**: 
+   - Field Email & Password standar dengan sanitasi otomatis regex `.replace(/\D/g, '')` pada input 6-digit OTP dan *slice* 6 karakter.
 2. **State Modal 6-Digit OTP**: 
-   - Modal/Panel Input khusus 6-digit pin code.
-   - Fitur **Countdown Timer 60 Detik** (`resendTimer`) yang menonaktifkan tombol "Kirim Ulang OTP" hingga timer mencapai 0.
-3. **Penyelesaian Registrasi**: Setelah `verifyOtp` sukses, pembuatan profil otomatis mengatur `role_id` ke ID role `'user'`.
+   - Modal/Panel Input khusus 6-digit pin code dengan *auto-focus*.
+   - Fitur **Countdown Timer 60 Detik** (`resendTimer`) untuk throttling tombol "Kirim Ulang OTP".
+3. **Fail-Safe & Anti-Enumeration Rules**:
+   - **Anti-User Enumeration**: Pesan UI selalu generik untuk menyamarkan apakah email sudah terdaftar.
+   - **Non-Destructive Error Recovery**: Error OTP tidak menghapus data form registrasi maupun modal input.
+   - **Auto-Provisioning Profile Trigger**: Memanfaatkan trigger PostgreSQL `on_auth_user_created` untuk menjamin atomisitas pembuatan baris profil di `public.profiles`.
 
 ---
 

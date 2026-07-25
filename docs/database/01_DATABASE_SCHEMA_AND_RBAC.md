@@ -91,3 +91,46 @@ Seluruh tabel dilindungi oleh RLS berbasis autentikasi `auth.uid()` untuk mengis
 - **`saved_places`**: `USING (user_id = auth.uid())` & `WITH CHECK (user_id = auth.uid())`
 - **`trips`**: `USING (user_id = auth.uid())` & `WITH CHECK (user_id = auth.uid())`
 - **`profiles`**: `USING (id = auth.uid())`
+
+---
+
+## 4. Auto-Provisioning User Profile (PostgreSQL Trigger)
+
+Untuk mencegah kondisi **Partial Auth State** (kondisi di mana akun pengguna berhasil dibuat di Supabase Auth `auth.users` namun pembuatan baris profil di `public.profiles` gagal atau terlewat di sisi client), sistem menerapkan trigger PostgreSQL otomatis di level database.
+
+### 4.1. Fungsi & Trigger PostgreSQL
+
+```sql
+-- Fungsi pembuat profil otomatis untuk pengguna baru
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_default_role_id UUID;
+BEGIN
+  -- Ambil ID role 'user' sebagai peranan bawaan
+  SELECT id INTO v_default_role_id FROM public.roles WHERE name = 'user';
+
+  INSERT INTO public.profiles (id, full_name, role_id, updated_at)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    v_default_role_id,
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger setelah akun baru terbuat pada auth.users
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+```
+
+### 4.2. Manfaat & Jaminan Integritas Data
+- **Atomisitas Autentikasi**: Memastikan bahwa setiap identitas yang terdaftar pada Supabase Auth dijamin 100% memiliki baris padanannya di `public.profiles` secara atomik.
+- **Pencegahan Error Client-Side**: Aplikasi tidak perlu mengandalkan logika pemanggilan mutasi client-side untuk membuat profil awal, mereduksi potensi kegagalan koneksi jaringan di sisi browser commuter.
+- **Konsistensi Role FK**: Provisi otomatis menjamin `role_id` langsung terikat pada ID role `'user'` dari tabel `public.roles`.
