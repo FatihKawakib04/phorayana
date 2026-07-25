@@ -19,4 +19,6 @@ Welcome to the documentation folder for Phorayana. This directory houses all arc
   - [06_GOD_MODE_ANALYTICS_DASHBOARD.md](./features/06_GOD_MODE_ANALYTICS_DASHBOARD.md) — Developer God Mode (`/god-kawakib`), RBAC protection, & anonymous SVG charts.
 - **`database/`**: Database design notes, schemas, Entity-Relationship diagrams, and migration details.
   - [01_DATABASE_SCHEMA_AND_RBAC.md](./database/01_DATABASE_SCHEMA_AND_RBAC.md) — Comprehensive PostgreSQL schema, ERD, RBAC roles definition, & RLS policies.
+- **`deployment/`**: Release notes & cloud deployment specifications.
+  - [05_NETLIFY_DEPLOYMENT_GUIDE.md](./05_NETLIFY_DEPLOYMENT_GUIDE.md) — Netlify production site configuration, Environment Variables, & release status.
 
