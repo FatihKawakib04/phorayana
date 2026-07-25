@@ -31,6 +31,24 @@ Upon page mount or reload, the `@nuxtjs/supabase` client-side plugin restores th
 2.  **JWT Verification**: The client plugin parses the browser cookie or localStorage to reconstruct the session.
 3.  **Variable ID Mapping**: Depending on the session state (fresh registration/login vs. cached session reload), the user UUID might reside in `user.value.id` or the standard JWT claim field `user.value.sub`.
 
+### Email OTP Registration Flow (`login.vue`)
+Phorayana mandates 6-digit Email OTP verification for new user signups to maintain data authenticity:
+
+1. **Registration Form Submit**: User submits email & password on `login.vue`.
+2. **OTP Dispatch**: Application triggers Supabase `signUp` which sends a 6-digit verification code to the user's email.
+3. **Modal & Countdown State**: `login.vue` switches UI state to an OTP verification modal containing:
+   - 6-digit pin code input field.
+   - Reactive 60-second countdown timer (`resendTimer`) before allowing a resend request.
+4. **Verification (`verifyOtp`)**: User submits the 6-digit code. Application executes:
+   ```typescript
+   const { data, error } = await supabase.auth.verifyOtp({
+     email: email.value,
+     token: otpToken.value,
+     type: 'signup'
+   })
+   ```
+5. **Profile Creation (Default Role)**: Upon successful OTP verification, the user session is initialized and a profile row is created with default `role_id` referencing the `'user'` role entry in `public.roles`.
+
 ### The Computed `userId` Resolution
 To prevent query failures due to undefined parameters, Phorayana resolves the active user ID using a computed property that bridges both payload formats:
 

@@ -56,19 +56,19 @@ sequenceDiagram
     Client->>MW: Akses halaman /god-kawakib
     MW->>Auth: Ambil session user via auth.getUser()
     Auth-->>MW: Kembalikan ID User (UUID)
-    MW->>DB: Query tabel profiles.role berdasarkan UUID
-    DB-->>MW: Kembalikan Role Pengguna
-    alt Role adalah 'god'
+    MW->>DB: Query profiles JOIN roles via role_id berdasarkan UUID
+    DB-->>MW: Kembalikan Nama Role (roles.name)
+    alt Role Name adalah 'god'
         MW-->>Client: Izinkan akses ke Halaman Analitik
-    else Role bukan 'god' / Kosong
+    else Role Name bukan 'god' / Kosong
         MW-->>Client: Redirect ke Halaman Utama (/)
     end
 ```
 
 ### Detil Teknis & Cara Aman Mengubah:
-*   **Berkas Terkait**: [god-auth.ts](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/middleware/god-auth.ts) dan [20260720162500_protect_profiles.sql](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/supabase/migrations/20260720162500_protect_profiles.sql).
-*   **Risiko**: Escalation privilege (pengguna mengubah role dirinya sendiri menjadi 'god' secara langsung dari browser client).
-*   **Cara Aman Mengubah**: Jangan pernah menghapus trigger database `trg_protect_profile_role` yang melindungi perubahan kolom `role` di sisi PostgreSQL. Jika ingin memberikan akses pengembang baru, daftarkan UUID pengguna tersebut secara langsung melalui migration script lokal atau dasbor administrator Supabase.
+*   **Berkas Terkait**: [god-auth.ts](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/middleware/god-auth.ts), `app/pages/login.vue`, dan migrasi RBAC Supabase.
+*   **RBAC Clean Architecture**: Skema `public.roles` memisahkan definisi role (`god` & `user`) secara teratur. Kolom string legacy `role` dan trigger legacy `trg_protect_profile_role` telah dihapus (dropped) sepenuhnya tanpa menyisakan legacy debt.
+*   **Keamanan Role**: Hak akses `god` diberikan melalui tautan `role_id` relasional di `public.profiles` yang merujuk ke tabel `public.roles`. Akun Master Developer di-seed secara otomatis dengan kredensial ter-hash (tanpa menyimpan plain text password di dalam codebase) dan terikat langsung ke ID role `god`.
 
 ---
 

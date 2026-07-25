@@ -175,29 +175,50 @@ A disguised admin route for the developer to monitor the entire ecosystem transp
 | **Data Viz** | `vue-chartjs` or `apexcharts` | Charts for `/god-kawakib` dashboard |
 | **Weather API** | Open-Meteo API | Free, no API key required for basic weather data |
 
-### 4.2. Authentication Methods (Omni-Channel)
-To minimize registration friction, Phorayana supports:
-- Email + Password
-- Google OAuth (One-Tap)
-- GitHub Auth
-- Discord Auth
+### 4.2. Authentication Methods (Email OTP & Omni-Channel)
+To ensure secure identity verification while maintaining PWA readiness, Phorayana enforces:
+- **Email + 6-Digit Email OTP Registration (`verifyOtp`)**: Mandatory user registration verification flow.
+- **60-Second Resend Countdown**: UI state management on `login.vue` for OTP resend throttling.
+- **OAuth Connectors**: Google OAuth (One-Tap), GitHub Auth, Discord Auth.
 
-All credentials are hashed server-side by Supabase Auth. The developer cannot view raw passwords.
+All credentials are hashed server-side by Supabase Auth. Master admin/developer accounts are seeded in hashed format with custom profile metadata, linked directly to the `god` role ID. Plain-text passwords are strictly forbidden in repository documents and code.
 
 ---
 
-## 5. Database Schema (Supabase PostgreSQL)
+## 5. Database Schema (Supabase PostgreSQL - RBAC Clean)
 
-### 5.1. `profiles`
-Stores user preferences and role flags.
+### 5.1. `roles` (RBAC Master Table)
+Defines relational access control roles within the system. Seeded with 2 main roles: `god` (Master Admin) and `user` (Standard User).
 
 ```sql
-CREATE TABLE profiles (
+CREATE TABLE public.roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL CHECK (name IN ('god', 'user')),
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Seed Data:
+-- 'god'  -> Master Admin / Developer Access
+-- 'user' -> Standard Commuter User Access
+```
+
+### 5.2. `profiles`
+Stores user preferences and relational role linkage.
+
+> [!IMPORTANT]
+> **RBAC Clean Migration Spec:**
+> - The legacy single string column `role TEXT` in `public.profiles` is completely dropped.
+> - The legacy trigger `trg_protect_profile_role` and function `protect_profile_role()` are dropped without leaving technical debt.
+> - User roles are strictly governed via `role_id UUID` referencing `public.roles(id)`. New registrations receive default `role_id` corresponding to `'user'`.
+
+```sql
+CREATE TABLE public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   updated_at TIMESTAMP WITH TIME ZONE,
   full_name TEXT,
   last_vehicle_used TEXT DEFAULT 'motor',
-  role TEXT DEFAULT 'user'  -- 'god' reserved for Fatih
+  role_id UUID REFERENCES public.roles(id) NOT NULL  -- Foreign Key to public.roles
 );
 ```
 
@@ -288,8 +309,15 @@ Phorayana adopts a **Warm Asphalt Matte** aesthetic — flat, doff, free from gl
 
 ## 8. User Flow Summary
 
-```
-[Open App] 
+[Registration & Authentication Flow]
+  → [Open login.vue / Register Form]
+  → [Submit Email & Credentials]
+  → [System triggers 6-digit Email OTP]
+  → [UI opens 6-Digit OTP Modal with 60s countdown timer]
+  → [User submits valid OTP code via verifyOtp]
+  → [Auth Verified -> Create Profile with default role_id ('user')]
+
+[Commute Flow]
   → [Auto-detect last vehicle] 
   → [Select Saved Place OR Instant GPS] 
   → [Tap "Mulai Jalan"] 
@@ -309,7 +337,6 @@ Phorayana adopts a **Warm Asphalt Matte** aesthetic — flat, doff, free from gl
   → [Next day: button locked, Manual Fix form shown] 
   → [User inputs capped duration] 
   → [Data saved with 'manual_fix' status]
-```
 
 ---
 
