@@ -10,12 +10,12 @@ Aplikasi Phorayana menggunakan struktur Nuxt 4 (di mana kode sumber utama berada
 
 | Jalur Berkas | Fungsi Singkat | Risiko Terkait | Cara Aman Mengubahnya |
 | :--- | :--- | :--- | :--- |
-| [`app/pages/index.vue`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/pages/index.vue) | Halaman utama aplikasi (Widget 1-Tap, GPS, Deteksi Timeout, Formulir Koreksi Manual). | Kompleksitas tinggi karena menangani status sinkronisasi offline, state UI dinamis, dan validasi input. | Pecah logika ke composable luar jika kode bertambah >1500 baris. Gunakan state reaktif terpusat. |
-| [`app/pages/god-kawakib.vue`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/pages/god-kawakib.vue) | Dashboard analitik developer (God Mode) berbasis visualisasi data SVG anonim tanpa PII. | Potensi error hidrasi (hydration mismatch) pada grafik/klien-side metrics dan kebocoran data sensitif. | Pastikan pembungkus `<ClientOnly>` tetap digunakan. Jangan memuat kolom sensitif seperti email/nama dalam query. |
-| [`app/middleware/god-auth.ts`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/middleware/god-auth.ts) | Proteksi rute `/god-kawakib` agar hanya dapat diakses pengguna dengan `role = 'god'`. | Kegagalan autentikasi di sisi server (SSR) yang menyebabkan redirect loop jika menggunakan ref asinkron. | Selalu gunakan `supabase.auth.getUser()` (bukan `useSupabaseUser()`) untuk verifikasi token JWT yang sinkron. |
-| [`app/utils/calendar.ts`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/utils/calendar.ts) | Utilitas pencocokan tanggal perjalanan untuk pengayaan event kedaerahan Jabodetabek/hari libur. | Format input tanggal tidak valid yang dapat merusak penanggalan JavaScript (`NaN` pada Date). | Lakukan parsing defensif menggunakan pengecekan `isNaN(new Date(dateInput).getTime())` sebelum pencocokan. |
-| [`nuxt.config.ts`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/nuxt.config.ts) | Konfigurasi sistem Nuxt, Supabase Auth redirect, dan aturan Background Sync Workbox PWA. | Salah konfigurasi regex urlPattern PWA atau redirectOptions Supabase dapat memutuskan sinkronisasi latar belakang. | Selalu uji service worker secara lokal pada mode produksi (`npm run build` dan `npm run preview`) setelah mengubah konfigurasi. |
-| [`supabase/migrations/`](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/supabase/migrations/) | Kumpulan berkas skema database PostgreSQL, hak akses table, kebijakan RLS, dan trigger database. | Salah modifikasi migrasi sql dapat menyebabkan error sinkronisasi skema database lokal dan produksi. | Buat berkas migrasi baru ber-timestamp menggunakan `npx supabase migration new <nama_migrasi>` daripada mengubah berkas lama. |
+| `app/pages/index.vue` | Halaman utama aplikasi (Widget 1-Tap, GPS, Deteksi Timeout, Formulir Koreksi Manual). | Kompleksitas tinggi karena menangani status sinkronisasi offline, state UI dinamis, dan validasi input. | Pecah logika ke composable luar jika kode bertambah >1500 baris. Gunakan state reaktif terpusat. |
+| `app/pages/god-kawakib.vue` | Dashboard analitik developer (God Mode) berbasis visualisasi data SVG anonim tanpa PII. | Potensi error hidrasi (hydration mismatch) pada grafik/klien-side metrics dan kebocoran data sensitif. | Pastikan pembungkus `<ClientOnly>` tetap digunakan. Jangan memuat kolom sensitif seperti email/nama dalam query. |
+| `app/middleware/god-auth.ts` | Proteksi rute `/god-kawakib` agar hanya dapat diakses pengguna dengan `role = 'god'`. | Kegagalan autentikasi di sisi server (SSR) yang menyebabkan redirect loop jika menggunakan ref asinkron. | Selalu gunakan `supabase.auth.getUser()` (bukan `useSupabaseUser()`) untuk verifikasi token JWT yang sinkron. |
+| `app/utils/calendar.ts` | Utilitas pencocokan tanggal perjalanan untuk pengayaan event kedaerahan Jabodetabek/hari libur. | Format input tanggal tidak valid yang dapat merusak penanggalan JavaScript (`NaN` pada Date). | Lakukan parsing defensif menggunakan pengecekan `isNaN(new Date(dateInput).getTime())` sebelum pencocokan. |
+| `nuxt.config.ts` | Konfigurasi sistem Nuxt, Supabase Auth redirect, dan aturan Background Sync Workbox PWA. | Salah konfigurasi regex urlPattern PWA atau redirectOptions Supabase dapat memutuskan sinkronisasi latar belakang. | Selalu uji service worker secara lokal pada mode produksi (`npm run build` dan `npm run preview`) setelah mengubah konfigurasi. |
+| `supabase/migrations/` | Kumpulan berkas skema database PostgreSQL, hak akses table, kebijakan RLS, dan trigger database. | Salah modifikasi migrasi sql dapat menyebabkan error sinkronisasi skema database lokal dan produksi. | Buat berkas migrasi baru ber-timestamp menggunakan `npx supabase migration new <nama_migrasi>` daripada mengubah berkas lama. |
 
 ---
 
@@ -36,7 +36,7 @@ graph TD
 ```
 
 ### Detil Teknis & Cara Aman Mengubah:
-*   **Berkas Terkait**: [index.vue](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/pages/index.vue) (fungsi `endTrip` & `submitManualFix`), [nuxt.config.ts](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/nuxt.config.ts) (Workbox caching & background sync).
+*   **Berkas Terkait**: `app/pages/index.vue` (fungsi `endTrip` & `submitManualFix`), `nuxt.config.ts` (Workbox caching & background sync).
 *   **Risiko**: Saat data reaktif Vue (seperti Proxy/Ref) dikirim langsung ke IndexedDB, browser memicu `DataCloneError`.
 *   **Cara Aman Mengubah**: Sebelum menyimpan payload ke IndexedDB atau antrean lokal, ubah data tersebut menjadi objek mentah JavaScript (raw object) menggunakan `JSON.parse(JSON.stringify(payload))`.
 
@@ -66,7 +66,7 @@ sequenceDiagram
 ```
 
 ### Detil Teknis & Cara Aman Mengubah:
-*   **Berkas Terkait**: [god-auth.ts](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/middleware/god-auth.ts), `app/pages/login.vue`, dan migrasi RBAC Supabase.
+*   **Berkas Terkait**: `app/middleware/god-auth.ts`, `app/pages/login.vue`, dan migrasi RBAC Supabase.
 *   **RBAC Clean Architecture**: Skema `public.roles` memisahkan definisi role (`god` & `user`) secara teratur. Kolom string legacy `role` dan trigger legacy `trg_protect_profile_role` telah dihapus (dropped) sepenuhnya tanpa menyisakan legacy debt.
 *   **Keamanan Role**: Hak akses `god` diberikan melalui tautan `role_id` relasional di `public.profiles` yang merujuk ke tabel `public.roles`. Akun Master Developer di-seed secara otomatis dengan kredensial ter-hash (tanpa menyimpan plain text password di dalam codebase) dan terikat langsung ke ID role `god`.
 
@@ -113,7 +113,7 @@ Sesuaikan logika helper pendukung data pada folder `app/utils/` untuk memproses 
 
 ### Langkah 3: Update Halaman UI & Offline Engine
 1. Tambahkan input field atau bind value baru tersebut pada berkas halaman terkait.
-2. Pastikan properti baru ditambahkan ke antrean data cadangan IndexedDB di berkas [index.vue](file:///d:/Users/FATIH/Documents/File%20Fatih%20Kawakib%20Kartono/Portfolio/WPY/phorayana/app/pages/index.vue).
+2. Pastikan properti baru ditambahkan ke antrean data cadangan IndexedDB di berkas `app/pages/index.vue`.
 
 ### Langkah 4: Pengujian & Gated Commit
 1. Jalankan server lokal: `npm run dev`.
