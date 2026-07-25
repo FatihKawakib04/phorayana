@@ -11,5 +11,8 @@ Welcome to the documentation folder for Phorayana. This directory houses all arc
   - [03_DEVELOPER_HANDOFF.md](./architecture/03_DEVELOPER_HANDOFF.md) — Developer maintenance handoff guide.
   - [04_RBAC_AND_EMAIL_OTP_SPEC.md](./architecture/04_RBAC_AND_EMAIL_OTP_SPEC.md) — Specification for RBAC roles refactoring, master identity, & Email OTP registration.
 - **`features/`**: Detailed specifications, user flows, and wireframes for specific platform capabilities.
+  - [01_EMAIL_OTP_AND_AUTH_FLOW.md](./features/01_EMAIL_OTP_AND_AUTH_FLOW.md) — Email OTP 6-digit registration & auth flow specification.
+  - [02_ONE_TAP_CHECKIN_AND_OFFLINE_SYNC.md](./features/02_ONE_TAP_CHECKIN_AND_OFFLINE_SYNC.md) — 1-Tap widget state machine & offline PWA background sync.
 - **`database/`**: Database design notes, schemas, Entity-Relationship diagrams, and migration details.
+  - [01_DATABASE_SCHEMA_AND_RBAC.md](./database/01_DATABASE_SCHEMA_AND_RBAC.md) — Comprehensive PostgreSQL schema, ERD, RBAC roles definition, & RLS policies.
 
