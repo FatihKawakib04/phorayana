@@ -65,3 +65,30 @@ sequenceDiagram
 ### 3.5. UI Loading Lock & Throttling Rate-Limit
 - **Loading State Lock**: Seluruh elemen tombol dan input pada modal dikunci (*disabled*) dalam status *loading* selama proses verifikasi `verifyOtp` berjalan.
 - **Resend Throttling**: Tombol *"Kirim Ulang OTP"* dikunci dengan timer countdown 60 detik (`resendTimer`) guna mematuhi batas *rate-limit* Supabase Auth.
+
+---
+
+## 4. Konfigurasi Supabase Auth & Template Email OTP 6-Digit
+
+Untuk memastikan email pendaftaran mengirimkan **6-Digit Token OTP** (bukan Magic Link URL) dan mengarah ke domain produksi Netlify, konfigurasi Supabase Dashboard berikut harus diterapkan:
+
+### 4.1. Konfigurasi URL & Redirect Domain (Supabase Auth Settings)
+- **Site URL**: `https://phorayana.netlify.app`
+- **Redirect URLs**:
+  - `https://phorayana.netlify.app/**`
+  - `https://phorayana.netlify.app/confirm`
+  - `https://phorayana.netlify.app/login`
+  - `http://localhost:3000/**` (khusus pengembangan lokal)
+
+### 4.2. Templat Email "Confirm Signup" (Supabase Email Templates)
+Pada **Supabase Dashboard -> Authentication -> Email Templates -> Confirm signup**, ubah templat bawaan untuk menampilkan variabel token OTP `{{ .Token }}`:
+
+```html
+<h2>Konfirmasi Pendaftaran - Phorayana</h2>
+<p>Terima kasih telah mendaftar di Phorayana. Kode 6-digit verifikasi OTP Anda adalah:</p>
+<h1 style="font-size: 36px; letter-spacing: 6px; font-family: monospace; color: #b02f2d; margin: 16px 0;">{{ .Token }}</h1>
+<p>Masukkan kode angka di atas pada aplikasi Phorayana untuk menyelesaikan pendaftaran.</p>
+<p style="font-size: 12px; color: #666;">Jika Anda tidak merasa melakukan pendaftaran ini, silakan abaikan email ini.</p>
+```
+
+> **Catatan Penting**: Mengganti `{{ .ConfirmationURL }}` dengan `{{ .Token }}` memastikan bahwa email yang dikirimkan oleh Supabase Auth berupa 6-digit kode angka numerik yang dapat langsung dimasukkan pada UI `login.vue`.
