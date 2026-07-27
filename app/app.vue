@@ -17,8 +17,13 @@ useHead({
   htmlAttrs: {
     lang: 'id' // Default to Indonesian context as per target user commuting in Bogor/Jakarta
   },
+  link: [
+    { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+    { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+    { rel: 'apple-touch-icon', href: '/icon.png' }
+  ],
   meta: [
-    { name: 'theme-color', content: '#1A1A1A' },
+    { name: 'theme-color', content: '#181818' },
     { name: 'mobile-web-app-capable', content: 'yes' },
     { name: 'apple-mobile-web-app-capable', content: 'yes' },
     { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }

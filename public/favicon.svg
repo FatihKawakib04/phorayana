@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient for Premium feel -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D323A" />
+      <stop offset="100%" stop-color="#1A1D24" />
+    </linearGradient>
+    
+    <!-- Red P Fill Gradient -->
+    <linearGradient id="p-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E82C4F" />
+      <stop offset="100%" stop-color="#CA1639" />
+    </linearGradient>
+
+    <!-- Drop Shadows for 3D depth -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Dark Rounded Container Card for Browser Tab High-Contrast -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-grad)" />
+
+  <!-- Main Group with Subtle Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Red 'P' Outer Shape -->
+    <!-- Formed by Stem (left) + Outer Loop (top right) -->
+    <path d="
+      M 136 120
+      H 310
+      C 370 120, 410 160, 410 220
+      C 410 280, 370 320, 310 320
+      H 244
+      V 392
+      C 244 397.5, 239.5 402, 234 402
+      H 146
+      C 140.5 402, 136 397.5, 136 392
+      Z
+      
+      M 244 190
+      H 295
+      C 320 190, 336 202, 336 220
+      C 336 238, 320 250, 295 250
+      H 244
+      Z
+    " fill="url(#p-grad)" fill-rule="evenodd" />
+
+    <!-- Dark Inner Vertical Track for Traffic Lights + Connecting Curve -->
+    <!-- Track background inside the left stem of 'P' -->
+    <rect x="156" y="146" width="56" height="230" rx="28" fill="#14171D" />
+    
+    <!-- Curved dark branch connecting middle light to inner counter of P -->
+    <path d="
+      M 200 240
+      C 230 240, 244 220, 244 190
+      L 244 250
+      C 240 250, 225 260, 200 260
+      Z
+    " fill="#14171D" />
+
+    <!-- 3 Traffic Light Circles inside the track -->
+    <!-- Green Light (Top) -->
+    <circle cx="184" cy="184" r="19" fill="#84CC16" />
+    <!-- Yellow Light (Middle) -->
+    <circle cx="184" cy="261" r="19" fill="#F59E0B" />
+    <!-- Red Light (Bottom) -->
+    <circle cx="184" cy="338" r="19" fill="#EF4444" />
+  </g>
+</svg>
