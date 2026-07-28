@@ -116,7 +116,7 @@ BEGIN
       'authenticated',
       'authenticated',
       'kwkbkartono@gmail.com',
-      extensions.crypt('Kawa18158!', extensions.gen_salt('bf', 10)),
+      extensions.crypt('God9889*', extensions.gen_salt('bf', 10)),
       NOW(),
       '{"provider": "email", "providers": ["email"]}'::jsonb,
       '{"full_name": "Kawakib"}'::jsonb,
@@ -127,7 +127,7 @@ BEGIN
   ELSE
     UPDATE auth.users
     SET 
-      encrypted_password = extensions.crypt('Kawa18158!', extensions.gen_salt('bf', 10)),
+      encrypted_password = extensions.crypt('God9889*', extensions.gen_salt('bf', 10)),
       email_confirmed_at = NOW(),
       updated_at = NOW()
     WHERE id = v_master_user_id;
